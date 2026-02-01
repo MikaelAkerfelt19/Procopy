@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ProCopy Yönetim</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden; /* Yatay kaydırmayı engelle */
+        }
+
+        .sidebar {
+            min-height: 100vh;
+            background: #343a40;
+            color: #fff;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+            .sidebar a {
+                color: #c2c7d0;
+                text-decoration: none;
+                padding: 12px 15px;
+                display: block;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+                transition: all 0.2s;
+                border-radius: 4px; /* Hafif yuvarlak köşeler */
+                margin-bottom: 4px;
+            }
+
+                .sidebar a:hover {
+                    background: #495057;
+                    color: #fff;
+                    padding-left: 20px; /* Hover efekti */
+                }
+
+                /* Aktif Menü Rengi */
+                .sidebar a.active {
+                    background: #0d6efd; /* Bootstrap Primary Color */
+                    color: #fff;
+                    font-weight: 600;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                }
+
+        .content-header {
+            padding: 15px 25px;
+            background: #fff;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Responsive Sidebar için */
+        @@media (max-width: 768px) {
+            .sidebar
+
+        {
+            position: fixed;
+            z-index: 1000;
+            height: 100%;
+            left: -250px; /* Varsayılan gizli */
+        }
+
+        .sidebar.show {
+            left: 0;
+        }
+
+        }</style>
+</head>
+<body>
+    <div class="d-flex">
+        <div class="sidebar p-3" style="width: 250px; flex-shrink: 0;">
+            <h4 class="text-white text-center mb-4 pb-3 border-bottom"><i class="fa-solid fa-print me-2"></i>ProCopy</h4>
+            <ul class="list-unstyled">
+                <li class="mb-2"><a href="/Admin/Admin/Index" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")"><i class="fa-solid fa-gauge me-2"></i> Özet Paneli</a></li>
+                <li class="mb-2"><a href="/Admin/Admin/Products" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Products" ? "active" : "")"><i class="fa-solid fa-box-open me-2"></i> Ürün Yönetimi</a></li>
+                <li class="mb-2"><a href="/Admin/Admin/CategoryList" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "CategoryList" || ViewContext.RouteData.Values["Action"]?.ToString() == "CategoryEdit" ? "active" : "")"><i class="fas fa-list me-2"></i> Kategoriler</a></li>
+                <li class="mb-2"><a href="/Admin/Admin/Messages" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Messages" ? "active" : "")"><i class="fa-solid fa-envelope me-2"></i> Gelen Mesajlar</a></li>
+                <li class="mt-5 border-top pt-2"><a href="/" target="_blank" class="text-warning"><i class="fa-solid fa-globe me-2"></i> Siteye Git</a></li>
+            </ul>
+        </div>
+
+        <div class="flex-grow-1" style="background-color: #f8f9fc; min-height: 100vh;">
+            <div class="content-header d-flex justify-content-between align-items-center bg-white">
+                <h5 class="m-0 text-dark font-weight-bold">@ViewData["Title"]</h5>
+                <div class="d-flex align-items-center">
+                    <div class="me-3 text-end d-none d-sm-block">
+                        <small class="text-muted d-block">Hoşgeldiniz,</small><span class="fw-bold text-dark">Yönetici</span>
+                    </div>
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fa-solid fa-user"></i></div>
+                </div>
+            </div>
+            <div class="container-fluid px-4 py-4">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

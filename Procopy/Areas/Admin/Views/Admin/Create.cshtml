@@ -1,0 +1,101 @@
+﻿@model Procopy.Models.Product
+@{
+    ViewData["Title"] = "Ürün Ekle";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4 border-bottom-primary">
+            <div class="card-header py-3 bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold"><i class="fas fa-magic me-2"></i>Akıllı Ürün Ekleme</h6>
+                <a href="/Admin/Admin/Products" class="btn btn-sm btn-light text-primary fw-bold">
+                    <i class="fas fa-arrow-left"></i> Listeye Dön
+                </a>
+            </div>
+            <div class="card-body p-5">
+
+                <div class="text-center mb-5">
+                    <i class="fas fa-robot text-primary mb-3" style="font-size: 3rem;"></i>
+                    <h4 class="text-gray-900 font-weight-bold">Web'den Ürün Çek</h4>
+                    <p class="text-muted">Sadece ürünün linkini yapıştırın, botumuz bilgileri (Resim, Fiyat, Seçenekler) sizin için getirsin.</p>
+                </div>
+
+                <form method="post" action="/Admin/Admin/Create">
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Hangi Kategoriye Eklenecek?</label>
+                        <select name="CategoryId" class="form-select form-select-lg shadow-sm" required>
+                            <option value="">-- Kategori Seçiniz --</option>
+                            @if (ViewBag.Categories != null)
+                            {
+                                foreach (var cat in ViewBag.Categories)
+                                {
+                                    <option value="@cat.CategoryId">@cat.CategoryName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Ürün Linki (Matbaaloji / Turkuaz vb.)</label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text bg-primary text-white"><i class="fas fa-link"></i></span>
+                            <input type="text" name="SourceUrl" class="form-control" placeholder="https://..." required>
+                        </div>
+                        <div class="form-text text-primary mt-2">
+                            <i class="fas fa-info-circle"></i> Linki yapıştırıp kaydettiğinizde sistem otomatik olarak verileri taramaya başlayacaktır.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Ürün Adı (İsteğe Bağlı)</label>
+                        <input type="text" name="ProductName" class="form-control" placeholder="Boş bırakırsanız sitedeki ismi kullanılır...">
+                    </div>
+
+                    <div class="accordion mb-4" id="manualEntryAccordion">
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button collapsed bg-light rounded text-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                    <i class="fas fa-edit me-2"></i> Manuel Detay Girmek İstiyorum (Fiyat, Kod vb.)
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#manualEntryAccordion">
+                                <div class="accordion-body bg-light mt-2 rounded">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Fiyat</label>
+                                            <input type="number" step="0.01" name="Price" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Ürün Kodu</label>
+                                            <input type="text" name="ProductCode" class="form-control">
+                                        </div>
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label">Resim URL</label>
+                                            <input type="text" name="MainImageUrl" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg py-3 shadow-lg hover-scale">
+                            <i class="fas fa-cloud-download-alt me-2"></i> Kaydet ve Verileri Çek
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-scale:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s;
+    }
+</style>

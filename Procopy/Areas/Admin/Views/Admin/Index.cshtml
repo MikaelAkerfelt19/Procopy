@@ -1,0 +1,86 @@
+﻿@model DashboardViewModel
+
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Özet Paneli";
+}
+
+<style>
+    .card-link {
+        text-decoration: none; /* Link alt çizgisini kaldır */
+        transition: transform 0.2s; /* Hafif bir animasyon */
+        display: block;
+        color: inherit; /* Kartın kendi rengini koru */
+    }
+
+        .card-link:hover {
+            transform: scale(1.03); /* Üzerine gelince çok az büyüsün */
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+</style>
+
+<div class="row">
+    <div class="col-md-3">
+        <a href="/Admin/Admin/Products" class="card-link">
+            <div class="card text-white bg-primary mb-3 h-100 shadow">
+                <div class="card-header border-0 font-weight-bold">TOPLAM ÜRÜN</div>
+                <div class="card-body">
+                    <h1 class="card-title display-4 font-weight-bold">
+                        <i class="fas fa-box fa-sm opacity-50"></i>
+                        @Model.ToplamUrunSayisi
+                    </h1>
+                    <p class="card-text text-white-50"><small>Ürünleri yönetmek için tıkla <i class="fas fa-arrow-right ml-1"></i></small></p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3">
+        <a href="/Admin/Admin/CategoryList" class="card-link">
+            <div class="card text-white bg-danger mb-3 h-100 shadow">
+                <div class="card-header border-0 font-weight-bold">KATEGORİLER</div>
+                <div class="card-body">
+                    <h1 class="card-title display-4 font-weight-bold">
+                        <i class="fas fa-tags fa-sm opacity-50"></i>
+                        @Model.KategoriSayisi
+                    </h1>
+                    <p class="card-text text-white-50"><small>Kategorileri düzenle <i class="fas fa-arrow-right ml-1"></i></small></p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3">
+        <a href="/Admin/Admin/Messages" class="card-link">
+            <div class="card text-white bg-warning mb-3 h-100 shadow">
+                <div class="card-header border-0 font-weight-bold text-dark">GELEN MESAJLAR</div>
+                <div class="card-body text-dark">
+                    <h1 class="card-title display-4 font-weight-bold">
+                        <i class="fas fa-envelope fa-sm opacity-50"></i>
+                        @Model.GelenMesajSayisi
+                    </h1>
+                    <p class="card-text text-dark-50"><small>Mesajları oku <i class="fas fa-arrow-right ml-1"></i></small></p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3 h-99 shadow">
+            <div class="card-header border-0 font-weight-bold">WHATSAPP TIK</div>
+            <div class="card-body">
+                <h1 class="card-title display-4 font-weight-bold">
+                    <i class="fab fa-whatsapp fa-sm opacity-50"></i>
+                    @Model.WhatsappTiklanmaSayisi
+                </h1>
+                <p class="card-text text-white-50"><small>Toplam etkileşim</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4 shadow-sm border-0">
+    <i class="fas fa-info-circle me-2"></i> Hoş geldiniz! Yukarıdaki renkli kutulara tıklayarak ilgili yönetim sayfalarına hızlıca geçiş yapabilirsiniz.
+</div>

@@ -1,0 +1,69 @@
+﻿@{
+    ViewData["Title"] = "Özet Paneli";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="row g-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 opacity-75">Toplam Ürün</h6>
+                        <h2 class="display-6 fw-bold mb-0">@ViewBag.TotalProducts</h2>
+                    </div>
+                    <i class="fa-solid fa-box fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 opacity-75">Kategoriler</h6>
+                        <h2 class="display-6 fw-bold mb-0">@ViewBag.TotalCategories</h2>
+                    </div>
+                    <i class="fa-solid fa-tags fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 opacity-75">Gelen Mesajlar</h6>
+                        <h2 class="display-6 fw-bold mb-0">@ViewBag.TotalMessages</h2>
+                    </div>
+                    <i class="fa-solid fa-envelope fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-danger text-white h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1 opacity-75">WhatsApp Tık</h6>
+                        <h2 class="display-6 fw-bold mb-0">@ViewBag.TotalClicks</h2>
+                    </div>
+                    <i class="fa-brands fa-whatsapp fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-5">
+    <div class="alert alert-info">
+        <i class="fa-solid fa-info-circle me-2"></i>
+        Hoş geldiniz! Sol menüden ürün ekleyebilir, mesajları okuyabilir veya kategori düzenleyebilirsiniz.
+    </div>
+</div>

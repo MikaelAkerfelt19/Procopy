@@ -1,0 +1,155 @@
+﻿@model Procopy.Models.ContactMessage
+
+@{
+    ViewData["Title"] = "İletişim";
+}
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold display-5">Bize Ulaşın</h1>
+        <p class="text-muted fs-5">Projeleriniz için ofisimize bekleriz veya aşağıdaki numaralardan doğrudan ulaşabilirsiniz.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card bg-dark text-white border-0 shadow h-100">
+                <div class="card-body p-4 p-lg-5 d-flex flex-column">
+                    <h3 class="card-title fw-bold text-danger mb-4 border-bottom border-secondary pb-3">İletişim Bilgileri</h3>
+
+                    <div class="d-flex mb-4 align-items-start">
+                        <div class="flex-shrink-0 btn bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fa-solid fa-location-dot fa-lg"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h5 class="fw-bold mb-1">Dükkan Adresi</h5>
+                            <p class="text-white-50 mb-0" style="line-height: 1.6;">
+                                Sahabiye Mahallesi, Otak Sokak<br>
+                                No: 48/C<br>
+                                Melikgazi / KAYSERİ
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex mb-4 align-items-start">
+                        <div class="flex-shrink-0 btn bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fa-solid fa-phone fa-lg"></i>
+                        </div>
+                        <div class="ms-3 w-100">
+                            <h5 class="fw-bold mb-3">Telefon Numaraları</h5>
+
+                            <div class="mb-3">
+                                <span class="d-block text-white-50 small text-uppercase fw-bold ls-1">Yılmaz Demir</span>
+                                <a href="tel:05075557013" class="text-white fs-5 text-decoration-none fw-bold hover-red">0507 555 70 13</a>
+                            </div>
+
+                            <div>
+                                <span class="d-block text-white-50 small text-uppercase fw-bold ls-1">Serdar Demir</span>
+                                <a href="tel:05537350038" class="text-white fs-5 text-decoration-none fw-bold hover-red">0553 735 00 38</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex mb-4 align-items-start">
+                        <div class="flex-shrink-0 btn bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fa-solid fa-envelope fa-lg"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h5 class="fw-bold mb-2">E-Posta</h5>
+                            <p class="mb-1"><a href="mailto:procopy.kayseri@gmail.com" class="text-white-50 text-decoration-none hover-white">procopy.kayseri@gmail.com</a></p>
+                            <p class="mb-0"><a href="mailto:tasarim.procopy@gmail.com" class="text-white-50 text-decoration-none hover-white">tasarim.procopy@gmail.com</a></p>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mb-4">
+                        <a href="https://wa.me/905075557013" target="_blank" class="btn btn-success py-3 fw-bold shadow-sm border-0 d-flex align-items-center justify-content-center" style="background-color:#25D366; transition: transform 0.2s;">
+                            <i class="fa-brands fa-whatsapp fa-xl me-2"></i> WhatsApp Destek Hattı
+                        </a>
+                    </div>
+
+                    <div class="mt-auto rounded overflow-hidden shadow-sm border border-secondary" style="height: 250px;">
+                        <iframe width="100%"
+                                height="100%"
+                                style="border:0;"
+                                loading="lazy"
+                                allowfullscreen
+                                src="https://maps.google.com/maps?q=Sahabiye+Mahallesi+Otak+Sokak+48/C+Melikgazi+Kayseri&t=&z=15&ie=UTF8&iwloc=&output=embed">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-lg h-100">
+                <div class="card-body p-4 p-lg-5">
+
+                    <h3 class="fw-bold mb-4 text-dark">Bize Yazın</h3>
+
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success d-flex align-items-center mb-4 p-3 rounded-3 shadow-sm">
+                            <i class="fa-solid fa-check-circle fa-lg me-3"></i>
+                            <div class="fw-bold">@TempData["SuccessMessage"]</div>
+                        </div>
+                    }
+
+                    <form asp-action="Contact" method="post">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label asp-for="Name" class="form-label fw-bold text-dark small text-uppercase">Adınız Soyadınız</label>
+                                <input asp-for="Name" class="form-control py-3 bg-light border-0 fw-bold" placeholder="Örn: Ahmet Yılmaz">
+                                <span asp-validation-for="Name" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label fw-bold text-dark small text-uppercase">E-Posta Adresiniz</label>
+                                <input asp-for="Email" class="form-control py-3 bg-light border-0 fw-bold" placeholder="mail@gmail.com">
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Phone" class="form-label fw-bold text-dark small text-uppercase">Telefon (Opsiyonel)</label>
+                                <input asp-for="Phone" class="form-control py-3 bg-light border-0 fw-bold" placeholder="0555...">
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Subject" class="form-label fw-bold text-dark small text-uppercase">Konu</label>
+                                <input asp-for="Subject" class="form-control py-3 bg-light border-0 fw-bold" placeholder="Sipariş / Bilgi">
+                                <span asp-validation-for="Subject" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Message" class="form-label fw-bold text-dark small text-uppercase">Mesajınız</label>
+                                <textarea asp-for="Message" class="form-control bg-light border-0 fw-bold" rows="6" placeholder="Mesajınızı buraya yazın..."></textarea>
+                                <span asp-validation-for="Message" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button type="submit" class="btn btn-danger w-100 py-3 fw-bold shadow hover-scale" style="font-size: 1.1rem; letter-spacing: 1px;">
+                                    <i class="fa-solid fa-paper-plane me-2"></i> MESAJI GÖNDER
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Özel CSS Efektleri */
+    .hover-red:hover {
+        color: var(--bs-danger) !important;
+        transition: color 0.3s;
+    }
+
+    .hover-white:hover {
+        color: #fff !important;
+        transition: color 0.3s;
+    }
+
+    .hover-scale:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s;
+    }
+
+    .ls-1 {
+        letter-spacing: 1px;
+    }
+</style>
