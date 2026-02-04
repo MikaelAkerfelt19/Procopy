@@ -30,11 +30,12 @@ namespace Procopy.Controllers
 
             List<string> logs = new List<string>();
             logs.Add($"<b>TARAMA BAŞLADI:</b> {mainCategory.CategoryName}<br>Hedef: {mainCategory.ImportUrl}<hr>");
+            var visitedUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
                 // Örümcek Başlıyor
-                await CrawlRecursive(mainCategory.ImportUrl, mainCategoryId, logs);
+                await CrawlRecursive(mainCategory.ImportUrl, mainCategoryId, logs, visitedUrls);
 
                 return Content($@"
                     <div style='font-family:Segoe UI, sans-serif; padding:20px; color:#333;'>
@@ -54,8 +55,14 @@ namespace Procopy.Controllers
         // ===================================================================
         // 2. ÖRÜMCEK (Alt Kategorileri Bulur, Yoksa Ürünleri Çeker)
         // ===================================================================
-        private async Task CrawlRecursive(string url, int parentId, List<string> logs)
+        private async Task CrawlRecursive(string url, int parentId, List<string> logs, HashSet<string> visitedUrls)
         {
+            if (!visitedUrls.Add(url))
+            {
+                logs.Add($"<span style='color:gray'>[⤴] Zaten tarandı: {url}</span>");
+                return;
+            }
+
             var web = new HtmlWeb();
             web.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
@@ -64,19 +71,32 @@ namespace Procopy.Controllers
             catch (Exception ex) { logs.Add($"<span style='color:red'>HATA: Linke gidilemedi ({url}) - {ex.Message}</span>"); return; }
 
             // A) SAYFADA ALT KATEGORİ VAR MI? (Kutu kutu listelenenler)
-            var subCats = doc.DocumentNode.SelectNodes("//li[contains(@class,'product-category')]//a")
+            var categoryGridNodes = doc.DocumentNode.SelectNodes("//ul[contains(@class,'products')]//li[contains(@class,'product-category')]//a");
+            var subCats = categoryGridNodes
+                          ?? doc.DocumentNode.SelectNodes("//li[contains(@class,'product-category')]//a")
                           ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'category')]//a")
                           ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'sub-menu')]//a");
+            var hasProductList = doc.DocumentNode.SelectNodes("//ul[contains(@class,'products')]//li[contains(@class,'product')]//a[contains(@class,'woocommerce-LoopProduct-link')]")
+                                 ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'product')]//a[contains(@class,'woocommerce-LoopProduct-link')]")
+                                 ?? doc.DocumentNode.SelectNodes("//div[@class='image']/a")
+                                 ?? doc.DocumentNode.SelectNodes("//h3/a")
+                                 ?? doc.DocumentNode.SelectNodes("//h4/a");
+            bool hasProducts = hasProductList != null && hasProductList.Count > 0;
 
             // Eğer sayfa bir ürün listesi değil de kategori listesi ise:
             if (subCats != null && subCats.Count > 0)
             {
                 // Linklerin gerçekten kategori olup olmadığını kontrol et
-                var validSubCats = subCats.Where(x => !x.GetAttributeValue("href", "").Contains("product") && !x.InnerText.Contains("Sepete")).ToList();
+                var validSubCats = subCats
+                    .Where(x => !x.GetAttributeValue("href", "").Contains("product") && !x.InnerText.Contains("Sepete"))
+                    .GroupBy(x => x.GetAttributeValue("href", "").Trim())
+                    .Select(g => g.First())
+                    .ToList();
 
-                if (validSubCats.Any())
+                if (validSubCats.Any() && (categoryGridNodes != null || !hasProducts))
                 {
                     logs.Add($"<b>📂 Alt Kategori Tespit Edildi ({validSubCats.Count} adet). İçlerine giriliyor...</b>");
+                    var createdCategories = new List<(string Url, Category Category)>();
                     foreach (var node in validSubCats)
                     {
                         string href = node.GetAttributeValue("href", "");
@@ -89,24 +109,27 @@ namespace Procopy.Controllers
 
                         string fullUrl = href.StartsWith("http") ? href : new Uri(new Uri(url), href).ToString();
 
-                        // Veritabanı Kontrol / Ekleme
+                        // Veritabanı Kontrol / Ekleme (Önce hepsini oluştur)
                         var cat = await GetOrCreateCategory(name, parentId, fullUrl);
-
+                        createdCategories.Add((fullUrl, cat));
+                    }
+                    foreach (var created in createdCategories)
+                    {
                         // Recursion: O kategorinin de içine gir
-                        await CrawlRecursive(fullUrl, cat.CategoryId, logs);
+                        await CrawlRecursive(created.Url, created.Category.CategoryId, logs, visitedUrls);
                     }
                     return; // Alt kategori varsa ürün arama, direkt çık.
                 }
             }
 
             // B) ALT KATEGORİ YOKSA ÜRÜNLERİ TOPLA
-            await ScrapeProducts(doc, url, parentId, logs);
+            await ScrapeProducts(doc, url, parentId, logs, visitedUrls);
         }
 
         // ===================================================================
         // 3. ÜRÜN TOPLAYICI (LİSTEDEN LİNKLERİ BULUR)
         // ===================================================================
-        private async Task ScrapeProducts(HtmlDocument doc, string baseUrl, int catId, List<string> logs)
+        private async Task ScrapeProducts(HtmlDocument doc, string baseUrl, int catId, List<string> logs, HashSet<string> visitedUrls)
         {
             // Ürün Linklerini Bul (Turkuaz vb. siteler için genel yapılar)
             var prodNodes = doc.DocumentNode.SelectNodes("//div[contains(@class,'product')]//a[contains(@class,'woocommerce-LoopProduct-link')]")
@@ -140,6 +163,34 @@ namespace Procopy.Controllers
                 }
             }
             logs.Add($"&nbsp;&nbsp;&nbsp; Sonuç: {added} Eklendi, {skipped} Atlandı.");
+
+            var nextPageNode = doc.DocumentNode.SelectSingleNode("//a[contains(@class,'next') and contains(@class,'page-numbers')]")
+                               ?? doc.DocumentNode.SelectSingleNode("//a[@rel='next']")
+                               ?? doc.DocumentNode.SelectSingleNode("//link[@rel='next']");
+
+            if (nextPageNode != null)
+            {
+                var nextHref = nextPageNode.GetAttributeValue("href", "");
+                if (!string.IsNullOrEmpty(nextHref))
+                {
+                    string nextUrl = nextHref.StartsWith("http") ? nextHref : new Uri(new Uri(baseUrl), nextHref).ToString();
+                    if (visitedUrls.Add(nextUrl))
+                    {
+                        var web = new HtmlWeb();
+                        web.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+                        try
+                        {
+                            var nextDoc = await web.LoadFromWebAsync(nextUrl);
+                            logs.Add($"<small>➡ Sayfa devamı bulundu, devam ediliyor: {nextUrl}</small>");
+                            await ScrapeProducts(nextDoc, nextUrl, catId, logs, visitedUrls);
+                        }
+                        catch (Exception ex)
+                        {
+                            logs.Add($"<span style='color:orange'>[!] Sonraki sayfa alınamadı ({nextUrl}) - {ex.Message}</span>");
+                        }
+                    }
+                }
+            }
         }
 
         // ===================================================================
@@ -228,6 +279,11 @@ namespace Procopy.Controllers
                 {
                     foreach (var t in textNodes) rawText += " " + t.InnerText;
                 }
+            }
+
+            if (rawText.ToLowerInvariant().Contains("fiyat sor"))
+            {
+                return 0;
             }
 
             // 2. Metin içinden fiyatı söküp al (Regex)
