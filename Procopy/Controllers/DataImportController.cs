@@ -4,11 +4,10 @@ using Procopy.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Procopy.Controllers
 {
-    // Bu Controller, yönetici girişi gerektirmelidir.
-    // [Authorize(Roles = "Admin")] // Eğer rol sisteminiz varsa açın
     public class DataImportController : Controller
     {
         private readonly ProcopyContext _context;
@@ -20,273 +19,358 @@ namespace Procopy.Controllers
             _env = env;
         }
 
-        // 1. ADIM: KATEGORİYİ TARAMAYI BAŞLAT
-        public async Task<IActionResult> ImportCategory(int categoryId)
+        // ===================================================================
+        // 1. BAŞLAT (CategoryList'teki Buton Buraya Gider)
+        // ===================================================================
+        public async Task<IActionResult> StartTreeImport(int mainCategoryId)
         {
-            // Kategoriyi ve Linkini Bul
-            var category = await _context.Categories.FindAsync(categoryId);
-            if (category == null || string.IsNullOrEmpty(category.ImportUrl))
-                return Content("<div style='color:red; padding:20px;'>Hata: Kategori bulunamadı veya 'Veri Çekme Linki' (ImportUrl) girilmemiş. <a href='/Admin/Admin/CategoryList'>Geri Dön</a></div>", "text/html");
+            var mainCategory = await _context.Categories.FindAsync(mainCategoryId);
+            if (mainCategory == null || string.IsNullOrEmpty(mainCategory.ImportUrl))
+                return Content("Hata: Ana kategori bulunamadı.");
+
+            List<string> logs = new List<string>();
+            logs.Add($"<b>TARAMA BAŞLADI:</b> {mainCategory.CategoryName}<br>Hedef: {mainCategory.ImportUrl}<hr>");
 
             try
             {
-                var web = new HtmlWeb();
-                // Bot Engellemesini Aşmak İçin Gerçek Bir Tarayıcı Gibi Davran
-                web.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36";
-
-                var doc = await web.LoadFromWebAsync(category.ImportUrl);
-
-                // Ürün Linklerini Bul (Turkuaz vb. siteler için genel yapılar)
-                // Genelde ürünler <li> veya <div> içinde <a> etiketindedir.
-                var productNodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'product-item')]//a[contains(@class, 'product-image')]")
-                                   ?? doc.DocumentNode.SelectNodes("//li[contains(@class, 'product')]//a[contains(@class, 'woocommerce-LoopProduct-link')]")
-                                   ?? doc.DocumentNode.SelectNodes("//div[@class='image']/a") // Bazı özel temalar
-                                   ?? doc.DocumentNode.SelectNodes("//h3[contains(@class, 'product-title')]/a");
-
-                if (productNodes == null)
-                    return Content("<div style='color:red;'>Ürün listesi bulunamadı. Sitenin HTML yapısı farklı olabilir.</div>", "text/html");
-
-                // Linkleri Benzersiz Yap (Aynı ürünü 2 kere çekmemek için)
-                var links = productNodes.Select(n => n.GetAttributeValue("href", "")).Distinct().Where(l => !string.IsNullOrEmpty(l)).ToList();
-
-                int addedCount = 0;
-                int updatedCount = 0;
-                List<string> errors = new List<string>();
-
-                // HER BİR ÜRÜN İÇİN TEK TEK İŞLEM YAP (DÖNGÜ)
-                foreach (var link in links)
-                {
-                    // Linki tam hale getir (https://... ekle)
-                    string fullUrl = link.StartsWith("http") ? link : new Uri(new Uri(category.ImportUrl), link).ToString();
-
-                    try
-                    {
-                        // DETAY SAYFASINA GİT VE VERİLERİ ÇEK
-                        bool isNew = await ProcessProductDetail(fullUrl, categoryId);
-                        if (isNew) addedCount++; else updatedCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add($"Hata ({fullUrl}): {ex.Message}");
-                    }
-
-                    // Sunucuyu yormamak için kısa bir bekleme (Opsiyonel)
-                    // System.Threading.Thread.Sleep(500); 
-                }
+                // Örümcek Başlıyor
+                await CrawlRecursive(mainCategory.ImportUrl, mainCategoryId, logs);
 
                 return Content($@"
-                    <div style='font-family:sans-serif; padding:20px; line-height:1.6;'>
-                        <h2 style='color:green;'>İşlem Tamamlandı!</h2>
-                        <ul>
-                            <li><strong>Taranan Link Sayısı:</strong> {links.Count}</li>
-                            <li><strong>Yeni Eklenen Ürün:</strong> {addedCount}</li>
-                            <li><strong>Güncellenen Ürün:</strong> {updatedCount}</li>
-                        </ul>
-                        {(errors.Any() ? "<h4 style='color:red;'>Hatalar:</h4><ul>" + string.Join("", errors.Select(e => $"<li>{e}</li>")) + "</ul>" : "")}
-                        <br>
-                        <a href='/Admin/Admin/CategoryList' class='btn btn-primary'>Kategori Listesine Dön</a>
-                        <a href='/Admin/Admin/Products' class='btn btn-secondary'>Ürünleri Gör</a>
+                    <div style='font-family:Segoe UI, sans-serif; padding:20px; color:#333;'>
+                        <h3 style='color:#28a745;'>✔ İşlem Tamamlandı</h3>
+                        <div style='background:#f4f4f4; padding:15px; border:1px solid #ddd; max-height:600px; overflow-y:auto; font-size:14px;'>
+                            {string.Join("<br>", logs)}
+                        </div>
+                        <br><a href='/Admin/Admin/Products' class='btn btn-primary'>Ürünlere Git</a>
                     </div>", "text/html");
             }
             catch (Exception ex)
             {
-                return Content($"Genel Hata: {ex.Message}");
+                return Content($"<h3>KRİTİK HATA:</h3> {ex.Message}");
             }
         }
 
-        // 2. ADIM: ÜRÜN DETAY SAYFASINI İŞLE (EN ÖNEMLİ KISIM)
-        private async Task<bool> ProcessProductDetail(string url, int categoryId)
+        // ===================================================================
+        // 2. ÖRÜMCEK (Alt Kategorileri Bulur, Yoksa Ürünleri Çeker)
+        // ===================================================================
+        private async Task CrawlRecursive(string url, int parentId, List<string> logs)
         {
             var web = new HtmlWeb();
-            web.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36";
-            var doc = await web.LoadFromWebAsync(url);
-            var root = doc.DocumentNode;
+            web.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-            // A) ÜRÜN ADI
-            var titleNode = root.SelectSingleNode("//h1");
-            if (titleNode == null) throw new Exception("Ürün başlığı (h1) bulunamadı.");
-            string productName = titleNode.InnerText.Trim();
-            productName = WebUtility.HtmlDecode(productName); // &amp; gibi karakterleri düzelt
+            HtmlDocument doc;
+            try { doc = await web.LoadFromWebAsync(url); }
+            catch (Exception ex) { logs.Add($"<span style='color:red'>HATA: Linke gidilemedi ({url}) - {ex.Message}</span>"); return; }
 
-            // B) ÜRÜN KODU (SKU)
-            string productCode = "OTOMATIK-" + new Random().Next(1000, 9999);
-            var skuNode = root.SelectSingleNode("//span[@class='sku']")
-                          ?? root.SelectSingleNode("//span[contains(text(), 'Ürün Kodu')]/following-sibling::span")
-                          ?? root.SelectSingleNode("//div[contains(text(), 'Ürün Kodu')]/span");
+            // A) SAYFADA ALT KATEGORİ VAR MI? (Kutu kutu listelenenler)
+            var subCats = doc.DocumentNode.SelectNodes("//li[contains(@class,'product-category')]//a")
+                          ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'category')]//a")
+                          ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'sub-menu')]//a");
 
-            if (skuNode != null) productCode = skuNode.InnerText.Trim();
-
-            // C) FİYAT
-            decimal price = 0;
-            // Birçok farklı fiyat yapısını dene
-            var priceNode = root.SelectSingleNode("//p[@class='price']//bdi")
-                            ?? root.SelectSingleNode("//span[contains(@class, 'price')]//amount")
-                            ?? root.SelectSingleNode("//div[@class='product-price']");
-
-            if (priceNode != null)
+            // Eğer sayfa bir ürün listesi değil de kategori listesi ise:
+            if (subCats != null && subCats.Count > 0)
             {
-                // "1.250,50 TL" -> "1250,50"
-                string cleanPrice = Regex.Replace(priceNode.InnerText, @"[^\d,]", "");
-                decimal.TryParse(cleanPrice, out price);
-            }
+                // Linklerin gerçekten kategori olup olmadığını kontrol et
+                var validSubCats = subCats.Where(x => !x.GetAttributeValue("href", "").Contains("product") && !x.InnerText.Contains("Sepete")).ToList();
 
-            // D) RESİM (İNDİRME İŞLEMİ)
-            string localImagePath = null;
-            var imgNode = root.SelectSingleNode("//div[contains(@class, 'woocommerce-product-gallery__image')]/a")
-                          ?? root.SelectSingleNode("//meta[@property='og:image']")
-                          ?? root.SelectSingleNode("//img[@id='bigpic']"); // Alternatif yapı
-
-            if (imgNode != null)
-            {
-                string remoteUrl = imgNode.GetAttributeValue("href", "") != "" ? imgNode.GetAttributeValue("href", "") : imgNode.GetAttributeValue("content", "");
-                if (!string.IsNullOrEmpty(remoteUrl))
+                if (validSubCats.Any())
                 {
-                    localImagePath = await DownloadImage(remoteUrl, productName);
+                    logs.Add($"<b>📂 Alt Kategori Tespit Edildi ({validSubCats.Count} adet). İçlerine giriliyor...</b>");
+                    foreach (var node in validSubCats)
+                    {
+                        string href = node.GetAttributeValue("href", "");
+                        string name = node.InnerText.Trim();
+                        // Temizlik
+                        name = Regex.Replace(name, @"\(\d+\)", "").Trim(); // (15) gibi sayıları sil
+                        name = WebUtility.HtmlDecode(name);
+
+                        if (string.IsNullOrEmpty(href) || name.Length < 2) continue;
+
+                        string fullUrl = href.StartsWith("http") ? href : new Uri(new Uri(url), href).ToString();
+
+                        // Veritabanı Kontrol / Ekleme
+                        var cat = await GetOrCreateCategory(name, parentId, fullUrl);
+
+                        // Recursion: O kategorinin de içine gir
+                        await CrawlRecursive(fullUrl, cat.CategoryId, logs);
+                    }
+                    return; // Alt kategori varsa ürün arama, direkt çık.
                 }
             }
 
-            // E) VERİTABANI İŞLEMİ (EKLE VEYA GÜNCELLE)
-            bool isNewProduct = false;
-            // Ürünü URL'ye veya Koda göre bul
-            var product = await _context.Products
-                .Include(p => p.ProductOptions)
-                .FirstOrDefaultAsync(p => p.SourceUrl == url || (p.ProductCode == productCode && p.ProductCode.Length > 5));
+            // B) ALT KATEGORİ YOKSA ÜRÜNLERİ TOPLA
+            await ScrapeProducts(doc, url, parentId, logs);
+        }
 
-            if (product == null)
+        // ===================================================================
+        // 3. ÜRÜN TOPLAYICI (LİSTEDEN LİNKLERİ BULUR)
+        // ===================================================================
+        private async Task ScrapeProducts(HtmlDocument doc, string baseUrl, int catId, List<string> logs)
+        {
+            // Ürün Linklerini Bul (Turkuaz vb. siteler için genel yapılar)
+            var prodNodes = doc.DocumentNode.SelectNodes("//div[contains(@class,'product')]//a[contains(@class,'woocommerce-LoopProduct-link')]")
+                            ?? doc.DocumentNode.SelectNodes("//div[@class='image']/a")
+                            ?? doc.DocumentNode.SelectNodes("//h3/a")
+                            ?? doc.DocumentNode.SelectNodes("//h4/a");
+
+            if (prodNodes == null)
             {
-                isNewProduct = true;
-                product = new Product
-                {
-                    CreateDate = DateTime.Now,
-                    IsActive = true,
-                    IsFeatured = false,
-                    SourceUrl = url, // Linki kaydet ki sonra tekrar bulabilelim
-                    CategoryId = categoryId
-                };
-                _context.Products.Add(product);
+                logs.Add($"<span style='color:orange'>[!] Bu sayfada ürün bulunamadı. (URL: {baseUrl})</span>");
+                return;
             }
 
-            // Bilgileri Güncelle
-            product.ProductName = productName;
-            product.ProductCode = productCode;
-            product.Price = price;
-            // Eğer resim indirdiysek güncelle, indiremediysek ve eskisi varsa dokunma
-            if (localImagePath != null) product.MainImageUrl = localImagePath;
+            var links = prodNodes.Select(x => x.GetAttributeValue("href", "")).Distinct().Where(x => x.Length > 5).ToList();
+            logs.Add($"&rArr; <b>{links.Count}</b> ürün bulundu, detaylar çekiliyor...");
 
-            // Slug (URL yapısı) oluştur
-            if (string.IsNullOrEmpty(product.Slug)) product.Slug = GenerateSlug(productName);
-
-            // Önce ürünü kaydet ki ID oluşsun (Option'lar için lazım)
-            await _context.SaveChangesAsync();
-
-
-            // F) ÖZEL VERİLERİ ÇEKME (EBAT, RENK, BASKI BİLGİSİ VB.)
-            // Bu kısım sayfadaki TABLOLARI okur ve ProductOptions tablosuna yazar.
-
-            // Mevcut seçenekleri temizle (Çift kayıt olmasın)
-            if (product.ProductOptions != null && product.ProductOptions.Any())
+            int added = 0, skipped = 0;
+            foreach (var link in links)
             {
-                _context.ProductOptions.RemoveRange(product.ProductOptions);
+                string fullUrl = link.StartsWith("http") ? link : new Uri(new Uri(baseUrl), link).ToString();
+
+                // Detay sayfasına git ve veriyi çek
+                var result = await ProcessProduct(fullUrl, catId);
+
+                if (result.Status == "ok") added++;
+                else
+                {
+                    skipped++;
+                    // Neden atlandığını loga yaz (Hata ayıklamak için önemli)
+                    // logs.Add($"<small style='color:gray'>Atlandı: {result.Message} - {fullUrl}</small>"); 
+                }
+            }
+            logs.Add($"&nbsp;&nbsp;&nbsp; Sonuç: {added} Eklendi, {skipped} Atlandı.");
+        }
+
+        // ===================================================================
+        // 4. DETAY SAYFASI İŞLEME (FİYAT AVCISI BURADA)
+        // ===================================================================
+        private async Task<(string Status, string Message)> ProcessProduct(string url, int catId)
+        {
+            try
+            {
+                var web = new HtmlWeb();
+                var doc = await web.LoadFromWebAsync(url);
+                var root = doc.DocumentNode;
+
+                // --- 1. İSİM ---
+                var h1 = root.SelectSingleNode("//h1");
+                string name = h1?.InnerText.Trim() ?? "İsimsiz Ürün";
+                name = WebUtility.HtmlDecode(name);
+
+                // --- 2. FİYAT (GELİŞMİŞ BULUCU) ---
+                decimal price = ExtractPriceValues(root);
+
+                // Eğer fiyat hala 0 ise ve "Fiyat Sorunuz" değilse, belki stok yoktur ama ürünü yine de ekleyelim mi?
+                // İsteğine göre: Fiyat 0 ise ATLA diyordun.
+                if (price <= 0) return ("skip", "Fiyat Bulunamadı veya 0");
+
+                // --- 3. RESİM ---
+                string imgPath = null;
+                var imgNode = root.SelectSingleNode("//div[contains(@class,'gallery')]//img")
+                              ?? root.SelectSingleNode("//figure//img")
+                              ?? root.SelectSingleNode("//a[@data-fancybox='gallery']//img");
+
+                if (imgNode != null)
+                {
+                    string src = imgNode.GetAttributeValue("src", "") != "" ? imgNode.GetAttributeValue("src", "") : imgNode.GetAttributeValue("href", "");
+                    if (src.Length > 5) imgPath = await DownloadImage(src, name);
+                }
+
+                // --- 4. KAYDET ---
+                var product = await _context.Products.Include(p => p.ProductOptions).FirstOrDefaultAsync(p => p.SourceUrl == url);
+                bool isNew = (product == null);
+
+                if (isNew)
+                {
+                    product = new Product { CreateDate = DateTime.Now, IsActive = true, SourceUrl = url, CategoryId = catId };
+                    _context.Products.Add(product);
+                }
+
+                product.ProductName = name;
+                product.Price = price;
+                if (imgPath != null) product.MainImageUrl = imgPath;
+
+                // Ürün Kodu (SKU)
+                var skuNode = root.SelectSingleNode("//span[@class='sku']");
+                product.ProductCode = skuNode != null ? skuNode.InnerText.Trim() : ("PR-" + new Random().Next(10000, 99999));
+
+                if (string.IsNullOrEmpty(product.Slug)) product.Slug = GenerateSlug(name);
+
                 await _context.SaveChangesAsync();
+
+                // --- 5. ÖZELLİKLERİ ÇEK ---
+                await ExtractFeatures(root, product.ProductId);
+
+                return ("ok", "Eklendi");
+            }
+            catch (Exception ex) { return ("error", ex.Message); }
+        }
+
+        // ===================================================================
+        // 5. YENİ FİYAT AYIKLAMA MOTORU (Regex Destekli)
+        // ===================================================================
+        private decimal ExtractPriceValues(HtmlNode root)
+        {
+            // 1. Önce standart class'lara bak
+            var nodes = root.SelectNodes("//p[@class='price'] | //span[@class='price'] | //span[@class='amount'] | //div[contains(@class,'price')]");
+            string rawText = "";
+
+            if (nodes != null)
+            {
+                foreach (var node in nodes) rawText += " " + node.InnerText;
+            }
+            else
+            {
+                // Class yoksa, içinde 'TL' veya '₺' geçen herhangi bir metni al
+                var textNodes = root.SelectNodes("//*[contains(text(),'TL')] | //*[contains(text(),'₺')]");
+                if (textNodes != null)
+                {
+                    foreach (var t in textNodes) rawText += " " + t.InnerText;
+                }
             }
 
-            // 1. Tablo Taraması (Genelde "Ek Bilgi" sekmesinde olur)
-            var tableRows = root.SelectNodes("//table[contains(@class, 'woocommerce-product-attributes')]//tr")
-                            ?? root.SelectNodes("//table[contains(@class, 'shop_attributes')]//tr");
+            // 2. Metin içinden fiyatı söküp al (Regex)
+            // Örnekler: "9.90 TL", "1,250.00 TL", "1.250 TL"
+            // Desen: Rakamlar + (Nokta veya Virgül + Rakamlar)
+            var matches = Regex.Matches(rawText, @"[\d]+(?:[.,]\d+)*");
 
-            if (tableRows != null)
+            decimal bestPrice = 0;
+
+            foreach (Match m in matches)
             {
-                int order = 1;
-                foreach (var row in tableRows)
+                string val = m.Value;
+
+                // Sadece yıl (2024, 2025) veya stok kodu (5055) olmasın diye basit kontrol:
+                // Genelde fiyatlarda kuruş olur veya 'TL' kelimesine yakındır.
+                // Biz en büyük mantıklı sayıyı veya TL'nin yanındakini almaya çalışalım.
+
+                // TEMİZLİK:
+                // Türkiye standardı: 1.250,50 (Binlik nokta, ondalık virgül)
+                // Turkuaz sitesi (gözlem): 9.90 (Ondalık nokta) olabilir.
+
+                decimal current = 0;
+                string cleanVal = val;
+
+                // Eğer hem nokta hem virgül varsa (1.250,50) -> Noktayı sil, virgülü nokta yap
+                if (val.Contains(".") && val.Contains(","))
                 {
-                    var th = row.SelectSingleNode("th"); // Başlık (Örn: Ebat)
-                    var td = row.SelectSingleNode("td"); // Değer (Örn: 10x20 cm)
+                    cleanVal = val.Replace(".", "").Replace(",", ".");
+                }
+                // Sadece virgül varsa (9,90) -> Nokta yap
+                else if (val.Contains(","))
+                {
+                    cleanVal = val.Replace(",", ".");
+                }
+                // Sadece nokta varsa (9.90 veya 1.000)
+                else if (val.Contains("."))
+                {
+                    // Eğer son nokta 3 hane gerideyse (1.000) bu binliktir, sil.
+                    // Değilse (9.90) ondalıktır, kalsın.
+                    var parts = val.Split('.');
+                    if (parts.Last().Length == 3 && parts.Length > 1)
+                        cleanVal = val.Replace(".", ""); // Binlik ayırıcıyı sil
+                }
 
-                    if (th != null && td != null)
+                if (decimal.TryParse(cleanVal, NumberStyles.Any, CultureInfo.InvariantCulture, out current))
+                {
+                    // 0'dan büyük ve mantıklı bir fiyatsa (Örn: Yıl olan 2024'ü fiyat sanma)
+                    // Genelde fiyatlar sayfada en belirgin yerdedir ama biz bulunan ilk geçerli fiyatı alalım
+                    // ya da "TL" kelimesine en yakın olanı.
+                    if (current > 0)
                     {
-                        string specName = th.InnerText.Trim();
-                        string specValue = td.InnerText.Trim();
-
-                        // Gereksiz karakterleri temizle
-                        specName = Regex.Replace(specName, ":", "");
-
-                        // Seçeneği Kaydet
-                        var option = new ProductOption
-                        {
-                            ProductId = product.ProductId,
-                            Name = specName, // "Ebat", "Malzeme" vb.
-                            IsDropdown = false, // Tablodan gelenler genelde bilgi amaçlıdır, seçim değildir.
-                            DisplayOrder = order++
-                        };
-                        _context.ProductOptions.Add(option);
-                        await _context.SaveChangesAsync();
-
-                        // Değerini Kaydet
-                        _context.ProductOptionValues.Add(new ProductOptionValue
-                        {
-                            OptionId = option.OptionId,
-                            Name = specValue,
-                            PriceAdjustment = 0
-                        });
+                        bestPrice = current;
+                        // Eğer bu sayı "TL" kelimesinin hemen yanındaysa kesin fiyattır, döngüyü kır.
+                        if (rawText.Contains(val + " TL") || rawText.Contains(val + "TL")) break;
                     }
                 }
             }
 
-            await _context.SaveChangesAsync();
-            return isNewProduct;
+            return bestPrice;
         }
 
-        // RESİM İNDİRME YARDIMCISI
-        private async Task<string> DownloadImage(string url, string productName)
+        // ===================================================================
+        // YARDIMCI METOTLAR
+        // ===================================================================
+        private async Task<Category> GetOrCreateCategory(string name, int parentId, string url)
+        {
+            var cat = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryName == name && c.ParentId == parentId);
+            if (cat == null)
+            {
+                cat = new Category
+                {
+                    CategoryName = name,
+                    ParentId = parentId,
+                    ImportUrl = url,
+                    IsActive = true,
+                    CreateDate = DateTime.Now,
+                    Slug = GenerateSlug(name)
+                };
+                _context.Categories.Add(cat);
+                await _context.SaveChangesAsync();
+            }
+            return cat;
+        }
+
+        private async Task ExtractFeatures(HtmlNode root, int productId)
+        {
+            // Eski özellikleri temizle
+            var existing = _context.ProductOptions.Where(x => x.ProductId == productId);
+            _context.ProductOptions.RemoveRange(existing);
+            await _context.SaveChangesAsync();
+
+            // Tabloları Tara
+            var rows = root.SelectNodes("//table//tr");
+            int order = 1;
+            if (rows != null)
+            {
+                foreach (var row in rows)
+                {
+                    var cells = row.SelectNodes("th|td");
+                    if (cells != null && cells.Count >= 2)
+                    {
+                        string key = cells[0].InnerText.Replace(":", "").Trim();
+                        string val = cells[1].InnerText.Trim();
+                        if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(val))
+                        {
+                            var opt = new ProductOption { ProductId = productId, Name = key, DisplayOrder = order++ };
+                            _context.ProductOptions.Add(opt);
+                            await _context.SaveChangesAsync();
+                            _context.ProductOptionValues.Add(new ProductOptionValue { OptionId = opt.OptionId, Name = val });
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task<string> DownloadImage(string url, string name)
         {
             try
             {
-                // URL bazen "//cdn..." şeklinde başlar, düzeltelim
                 if (url.StartsWith("//")) url = "https:" + url;
+                if (!url.StartsWith("http")) url = "https://www.turkuazpromosyon.com.tr" + url; // Relatif link düzeltme
 
                 using (var client = new HttpClient())
                 {
-                    // Tarayıcı gibi davran
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-
-                    var imageBytes = await client.GetByteArrayAsync(url);
-
-                    // Dosya uzantısını al (jpg, png)
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+                    var bytes = await client.GetByteArrayAsync(url);
                     string ext = Path.GetExtension(url).Split('?')[0];
-                    if (string.IsNullOrEmpty(ext) || ext.Length > 5) ext = ".jpg";
-
-                    // Benzersiz isim oluştur: "kalem-modeli-guid.jpg"
-                    string fileName = GenerateSlug(productName) + "-" + Guid.NewGuid().ToString().Substring(0, 4) + ext;
-
-                    // Klasör yolu: wwwroot/images/products
-                    string uploadFolder = Path.Combine(_env.WebRootPath, "images", "products");
-                    if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
-
-                    string filePath = Path.Combine(uploadFolder, fileName);
-
-                    // Diske yaz
-                    await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
-
-                    // Veritabanına kaydedilecek yol
+                    if (string.IsNullOrEmpty(ext)) ext = ".jpg";
+                    string fileName = GenerateSlug(name) + "-" + Guid.NewGuid().ToString().Substring(0, 4) + ext;
+                    string path = Path.Combine(_env.WebRootPath, "images", "products", fileName);
+                    await System.IO.File.WriteAllBytesAsync(path, bytes);
                     return "/images/products/" + fileName;
                 }
             }
-            catch (Exception)
-            {
-                // Resim indirilemezse null dön, işlemi bozma
-                return null;
-            }
+            catch { return null; }
         }
 
-        // TÜRKÇE KARAKTER TEMİZLEME (SLUG İÇİN)
         private string GenerateSlug(string text)
         {
-            if (string.IsNullOrEmpty(text)) return "";
-            text = text.ToLowerInvariant();
-            text = text.Replace("ş", "s").Replace("ı", "i").Replace("ğ", "g").Replace("ç", "c").Replace("ö", "o").Replace("ü", "u");
-            text = Regex.Replace(text, @"[^a-z0-9\s-]", ""); // Özel karakterleri sil
-            text = Regex.Replace(text, @"\s+", "-"); // Boşlukları tire yap
-            return text;
+            text = text.ToLowerInvariant().Replace("ş", "s").Replace("ı", "i").Replace("ğ", "g").Replace("ç", "c").Replace("ö", "o").Replace("ü", "u");
+            text = Regex.Replace(text, @"[^a-z0-9\s-]", "");
+            return Regex.Replace(text, @"\s+", "-");
         }
     }
 }

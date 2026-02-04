@@ -30,23 +30,15 @@
 
                             @if (!string.IsNullOrEmpty(anaKategori.ImportUrl))
                             {
-                                <span class="badge bg-purple ms-2" style="background-color: #6f42c1; font-size: 0.7em;">
-                                    <i class="fas fa-robot"></i> Bot Bağlı
-                                </span>
+                                <button onclick="botuBaslat(@anaKategori.CategoryId)"
+                                        class="btn btn-sm text-white ms-2"
+                                        style="background-color: #6f42c1; border:none;"
+                                        title="Botu Çalıştır">
+                                    <i class="fas fa-play me-1"></i> Bot
+                                </button>
                             }
                         </div>
                         <div>
-                            @if (!string.IsNullOrEmpty(anaKategori.ImportUrl))
-                            {
-                                <a href="/DataImport/ImportCategory?categoryId=@anaKategori.CategoryId"
-                                   class="btn btn-sm text-white me-2"
-                                   style="background-color: #6f42c1;"
-                                   target="_blank"
-                                   title="Botu Çalıştır">
-                                    <i class="fas fa-play"></i> Bot
-                                </a>
-                            }
-
                             <a href="/Admin/Admin/ChangeOrder?id=@anaKategori.CategoryId&direction=up" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="fas fa-arrow-up"></i></a>
                             <a href="/Admin/Admin/ChangeOrder?id=@anaKategori.CategoryId&direction=down" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="fas fa-arrow-down"></i></a>
                             <a href="/Admin/Admin/CategoryCreate?parentId=@anaKategori.CategoryId" class="btn btn-sm btn-success py-1 ms-3" style="font-size: 0.8rem;">+ Alt Ekle</a>
@@ -67,20 +59,15 @@
 
                                     @if (!string.IsNullOrEmpty(altKategori.ImportUrl))
                                     {
-                                        <i class="fas fa-robot text-purple ms-1" style="color: #6f42c1;" title="Bot Bağlı"></i>
+                                        <button onclick="botuBaslat(@altKategori.CategoryId)"
+                                                class="btn btn-sm text-white ms-2"
+                                                style="background-color: #6f42c1; border:none;"
+                                                title="Botu Çalıştır">
+                                            <i class="fas fa-play-circle me-1"></i> Bot
+                                        </button>
                                     }
                                 </div>
                                 <div>
-                                    @if (!string.IsNullOrEmpty(altKategori.ImportUrl))
-                                    {
-                                        <a href="/DataImport/ImportCategory?categoryId=@altKategori.CategoryId"
-                                           class="text-decoration-none me-2"
-                                           style="color: #6f42c1; font-weight:bold;"
-                                           target="_blank">
-                                            <i class="fas fa-play-circle"></i> Bot
-                                        </a>
-                                    }
-
                                     <a href="/Admin/Admin/ChangeOrder?id=@altKategori.CategoryId&direction=up" class="text-muted me-1"><small><i class="fas fa-chevron-up"></i></small></a>
                                     <a href="/Admin/Admin/ChangeOrder?id=@altKategori.CategoryId&direction=down" class="text-muted me-2"><small><i class="fas fa-chevron-down"></i></small></a>
                                     <a href="/Admin/Admin/CategoryEdit?id=@altKategori.CategoryId" class="text-warning me-2"><small>Düzenle</small></a>
@@ -94,3 +81,60 @@
         </ul>
     </div>
 </div>
+
+<div class="modal fade" id="botSonucModal" tabindex="-1" aria-labelledby="botModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="botModalLabel">
+                    <i class="fas fa-robot"></i> Bot İşlem Raporu
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body" id="botModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                    <h5 class="mt-3 text-muted">Veriler taranıyor, lütfen bekleyiniz...</h5>
+                    <small>Bu işlem ürün sayısına göre 1-2 dakika sürebilir.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <a href="/Admin/Admin/Products" class="btn btn-success">Ürünlere Git</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function botuBaslat(id) {
+        // 1. Modalı aç
+        var myModal = new bootstrap.Modal(document.getElementById('botSonucModal'));
+        myModal.show();
+
+        // 2. İçeriği "Yükleniyor" haline getir (önceki rapor kalmasın)
+        $('#botModalBody').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                <h5 class="mt-3">Bot Çalışıyor...</h5>
+                <p class="text-muted">Kategoriler ve ürünler taranıyor. Lütfen sayfayı kapatmayın.</p>
+            </div>
+        `);
+
+        // 3. Arka planda botu çalıştır (AJAX)
+        $.ajax({
+            url: '/DataImport/StartTreeImport?mainCategoryId=' + id,
+            type: 'GET',
+            success: function(response) {
+                // İşlem bitince gelen raporu popup içine bas
+                $('#botModalBody').html(response);
+            },
+            error: function() {
+                $('#botModalBody').html('<div class="alert alert-danger">Bir hata oluştu! Bot çalıştırılamadı.</div>');
+            }
+        });
+    }
+</script>

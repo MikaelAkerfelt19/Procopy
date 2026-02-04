@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Procopy.Models; // Kendi proje isminle kontrol et
+using Procopy.Models; 
 using System.Diagnostics;
 
 namespace Procopy.Controllers

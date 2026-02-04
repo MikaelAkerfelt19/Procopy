@@ -30,7 +30,7 @@ public partial class Product
     public ICollection<ProductCategory>? ProductCategories { get; set; }
     public int? TotalWhatsappClicks { get; set; }
 
-    public virtual Category Category { get; set; } = null!;
+    public virtual Category Category { get; set; }
 
     public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
    
