@@ -48,10 +48,10 @@
                     </div>
                 </li>
 
-                @if (anaKategori.InverseParent != null && anaKategori.InverseParent.Any())
+                @if (anaKategori.Children != null && anaKategori.Children.Any())
                 {
                     <div class="ms-5 border-start border-3 border-secondary ps-3 mb-3">
-                        @foreach (var altKategori in anaKategori.InverseParent.OrderBy(x => x.DisplayOrder))
+                        @foreach (var altKategori in anaKategori.Children.OrderBy(x => x.DisplayOrder))
                         {
                             <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                                 <div class="text-secondary">

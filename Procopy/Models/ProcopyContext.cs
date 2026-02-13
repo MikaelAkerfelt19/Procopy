@@ -47,7 +47,7 @@ public partial class ProcopyContext : DbContext
             entity.Property(e => e.ParentId).HasColumnName("ParentID");
             entity.Property(e => e.Slug).HasMaxLength(150);
 
-            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
+           entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
                 .HasForeignKey(d => d.ParentId)
                 .HasConstraintName("FK__Categorie__Paren__398D8EEE");
         });
@@ -71,10 +71,10 @@ public partial class ProcopyContext : DbContext
             entity.Property(e => e.Slug).HasMaxLength(250);
             entity.Property(e => e.SourceUrl).HasMaxLength(500); // Scraping Linki İçin
 
-            entity.HasOne(d => d.Category).WithMany(p => p.Products)
-                .HasForeignKey(d => d.CategoryId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Products__Catego__3F466844");
+            /* entity.HasOne(d => d.Category).WithMany(p => p.Products)
+                 .HasForeignKey(d => d.CategoryId)
+                 .OnDelete(DeleteBehavior.ClientSetNull)
+                 .HasConstraintName("FK__Products__Catego__3F466844");*/
         });
 
         modelBuilder.Entity<ProductImage>(entity =>

@@ -43,7 +43,7 @@ namespace Procopy.Areas.Admin.Controllers
             // ParentId'si boş olanlar (Ana Kategoriler) gelsin.
             // Yanında da InverseParent (Alt Kategorileri) getirsin.
             var kategoriler = _context.Categories
-                                      .Include(c => c.InverseParent)
+                                      .Include(c => c.Children)
                                       .Where(c => c.ParentId == null) // Sadece ana babalar
                                       .OrderBy(c => c.DisplayOrder)   // Sıraya göre
                                       .ToList();
@@ -116,11 +116,11 @@ namespace Procopy.Areas.Admin.Controllers
         // SİLME
         public IActionResult DeleteCategory(int id)
         {
-            var kategori = _context.Categories.Include(x => x.InverseParent).FirstOrDefault(x => x.CategoryId == id);
+            var kategori = _context.Categories.Include(x => x.Children).FirstOrDefault(x => x.CategoryId == id);
             if (kategori != null)
             {
                 // Altında çocukları varsa sildirmiyoruz
-                if (kategori.InverseParent.Any())
+                if (kategori.Children.Any())
                 {
                     TempData["Hata"] = "Bu kategorinin alt başlıkları var! Önce onları silmelisin.";
                     return RedirectToAction("CategoryList");
