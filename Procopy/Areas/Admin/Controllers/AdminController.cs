@@ -60,13 +60,18 @@ namespace Procopy.Areas.Admin.Controllers
             return View();
         }
 
-        // KAYDETME İŞLEMİ (POST)
+        // KAYDETME İŞLEMİ (POST) - BOT ENTEGRASYONLU
         [HttpPost]
         public IActionResult CategoryCreate(Category p)
         {
             // Slug ve diğer zorunlu alanlar boş gelirse hata vermemesi için
-            // Basit bir doldurma yapalım (veya formdan alabilirsin)
-            if (string.IsNullOrEmpty(p.Slug)) p.Slug = p.CategoryName.ToLower().Replace(" ", "-");
+            if (string.IsNullOrEmpty(p.Slug))
+            {
+                p.Slug = (p.CategoryName ?? "kategori-" + DateTime.Now.Ticks).ToLower()
+                    .Replace(" ", "-").Replace("ş", "s").Replace("ı", "i")
+                    .Replace("ğ", "g").Replace("ç", "c").Replace("ö", "o")
+                    .Replace("ü", "u").Replace(".", "").Replace("/", "");
+            }
 
             // Ekleneceği yerdeki en son sırayı bulup +1 verelim
             var sonSira = _context.Categories
@@ -79,6 +84,17 @@ namespace Procopy.Areas.Admin.Controllers
 
             _context.Categories.Add(p);
             _context.SaveChanges();
+
+            // --- ÖRÜMCEK AĞI BOTU TETİKLEYİCİ ---
+            // Eğer kategori eklenirken "Kaynak Link (ImportUrl)" girildiyse botu çalıştır
+            if (!string.IsNullOrEmpty(p.ImportUrl))
+            {
+                // DataImportController içindeki StartTreeImport metoduna yeni oluşan kategorinin ID'si ile gidiyoruz.
+                // Bot bu ID'yi alıp o linkteki alt menüleri ve ürünleri taramaya başlayacak.
+                return Redirect($"/DataImport/StartTreeImport?mainCategoryId={p.CategoryId}");
+            }
+
+            // Link girilmediyse normal listeye dön
             return RedirectToAction("CategoryList");
         }
 
@@ -149,9 +165,8 @@ namespace Procopy.Areas.Admin.Controllers
             return View(kategori);
         }
 
-        // DÜZENLEMEYİ KAYDEDER (POST)
         [HttpPost]
-        // KATEGORİ GÜNCELLEME (POST)
+
         [HttpPost]
         public IActionResult CategoryEdit(Category p)
         {
@@ -188,11 +203,7 @@ namespace Procopy.Areas.Admin.Controllers
 
             return View(urunler);
         }
-        // ---------------------------------------------------------
-        // ÜRÜN YÖNETİMİ (CREATE & EDIT)
-        // ---------------------------------------------------------
-
-        // YENİ ÜRÜN EKLEME SAYFASI (GET)
+ 
         [HttpGet]
         public IActionResult Create()
         {
@@ -206,8 +217,7 @@ namespace Procopy.Areas.Admin.Controllers
         [HttpPost]
         public IActionResult Create(Product p)
         {
-            // Eğer Kaynak Link var ama Ürün Adı girilmemişse, geçici bir isim verelim.
-            // (Çünkü veritabanı ProductName alanını zorunlu tutuyor olabilir)
+
             if (!string.IsNullOrEmpty(p.SourceUrl) && string.IsNullOrEmpty(p.ProductName))
             {
                 p.ProductName = "Yeni Ürün (Taranıyor...)";
@@ -262,8 +272,6 @@ namespace Procopy.Areas.Admin.Controllers
                 existing.MainImageUrl = p.MainImageUrl;
                 existing.IsActive = p.IsActive;
                 existing.IsFeatured = p.IsFeatured;
-
-                // KAYNAK LİNKİ GÜNCELLEME (Veri Çekme İçin Önemli)
                 existing.SourceUrl = p.SourceUrl;
 
                 // Slug boşsa yenile
@@ -280,13 +288,12 @@ namespace Procopy.Areas.Admin.Controllers
             return View(p);
         }
 
-        // ÜRÜN SİLME
         public IActionResult Delete(int id)
         {
             var product = _context.Products.Find(id);
             if (product != null)
             {
-                // İlişkili kayıtlar (Seçenekler vb.) Cascade Delete ile silinecek
+
                 _context.Products.Remove(product);
                 _context.SaveChanges();
             }
