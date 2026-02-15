@@ -1,8 +1,9 @@
-﻿@model IEnumerable<Procopy.Models.Product>
+﻿@using Procopy.Models
+@model IEnumerable<Product>
 
 @{
     ViewData["Title"] = ViewBag.PageTitle ?? "Ürünler";
-    var categories = ViewBag.Categories as List<Procopy.Models.Category>;
+    var categories = ViewBag.Categories as List<Category>;
     string currentSlug = ViewBag.CurrentSlug as string;
 }
 

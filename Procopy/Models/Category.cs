@@ -1,6 +1,4 @@
-﻿// ✅ Models/Category.cs - GÜNCELLENMİŞ
-
-using Procopy.Models;
+﻿using Procopy.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 

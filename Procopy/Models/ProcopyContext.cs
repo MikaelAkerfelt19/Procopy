@@ -26,6 +26,8 @@ public partial class ProcopyContext : DbContext
     // --- YENİ EKLENEN TABLOLAR (Scraping ve Hesaplama İçin) ---
     public virtual DbSet<ProductOption> ProductOptions { get; set; }
     public virtual DbSet<ProductOptionValue> ProductOptionValues { get; set; }
+    public DbSet<ImportRun> ImportRuns { get; set; }
+    public DbSet<ImportLog> ImportLogs { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning bdTo protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -47,7 +49,7 @@ public partial class ProcopyContext : DbContext
             entity.Property(e => e.ParentId).HasColumnName("ParentID");
             entity.Property(e => e.Slug).HasMaxLength(150);
 
-           entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
+           entity.HasOne(d => d.Parent).WithMany(p => p.Children)
                 .HasForeignKey(d => d.ParentId)
                 .HasConstraintName("FK__Categorie__Paren__398D8EEE");
         });

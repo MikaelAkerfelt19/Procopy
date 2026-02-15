@@ -4,81 +4,82 @@
 @{
     ViewData["Title"] = "Kategoriler";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    // C# Local Function: Kendi kendini çağıran (rekürsif) metod ile Sınırsız Alt Kategori Ağacı Çizimi
+    void RenderCategory(Category node, int level)
+    {
+        var marginLeft = level * 40; // Her kademede 40px sağa (içeri) kaydır
+        var isRoot = level == 0;
+        var bgColor = isRoot ? "bg-white" : "bg-light";
+        var borderLeft = isRoot ? "4px solid #4e73df" : "4px solid #1cc88a";
+
+        <div class="list-group-item @bgColor border mb-2 rounded shadow-sm" style="margin-left: @(marginLeft)px; border-left: @borderLeft !important;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-dark">
+                    @if (isRoot)
+                    {
+                        <i class="fas fa-folder-open text-primary me-2" style="font-size: 1.2rem;"></i>
+                        <strong style="font-size: 1.1rem;">@node.CategoryName</strong>
+                    }
+                    else
+                    {
+                        <i class="fas fa-level-up-alt fa-rotate-90 text-success me-2"></i>
+                        <span class="fw-bold text-secondary">@node.CategoryName</span>
+                    }
+
+                    @if (!string.IsNullOrEmpty(node.ImportUrl))
+                    {
+                        <button onclick="botuBaslat(@node.CategoryId)" class="btn btn-sm text-white ms-2" style="background-color: #6f42c1; border:none;" title="Botu Çalıştır">
+                            <i class="fas fa-play-circle me-1"></i> Bot
+                        </button>
+                    }
+                </div>
+                <div>
+                    <a href="/Admin/Admin/ChangeOrder?id=@node.CategoryId&direction=up" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Yukarı Taşı"><i class="fas fa-arrow-up"></i></a>
+                    <a href="/Admin/Admin/ChangeOrder?id=@node.CategoryId&direction=down" class="btn btn-sm btn-outline-secondary py-0 px-1 me-2" title="Aşağı Taşı"><i class="fas fa-arrow-down"></i></a>
+
+                    <a href="/Admin/Admin/CategoryCreate?parentId=@node.CategoryId" class="btn btn-sm btn-success py-1" style="font-size: 0.8rem;">
+                        <i class="fas fa-plus"></i> Alt Ekle
+                    </a>
+
+                    <a href="/Admin/Admin/CategoryEdit?id=@node.CategoryId" class="btn btn-sm btn-warning py-1 ms-1" style="font-size: 0.8rem;">Düzenle</a>
+                    <a href="/Admin/Admin/DeleteCategory?id=@node.CategoryId" class="btn btn-sm btn-danger py-1 ms-1" style="font-size: 0.8rem;" onclick="return confirm('Silmek istediğine emin misin?')">Sil</a>
+                </div>
+            </div>
+        </div>
+
+        // EĞER bu kategorinin de altında alt-kategoriler varsa, fonksiyon KENDİ KENDİNİ tekrar çalıştırır! (Sınırsız Döngü)
+        if (node.Children != null && node.Children.Any())
+        {
+            foreach (var child in node.Children.OrderBy(x => x.DisplayOrder))
+            {
+                RenderCategory(child, level + 1);
+            }
+        }
+    }
 }
 
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary">Kategori Ağacı</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Kategori Ağacı (Sınırsız Derinlik)</h6>
         <a href="/Admin/Admin/CategoryCreate" class="btn btn-primary btn-sm">
             <i class="fas fa-plus"></i> Yeni Ana Kategori
         </a>
     </div>
 
-    <div class="card-body">
+    <div class="card-body" style="background-color: #f8f9fc;">
         @if (TempData["Hata"] != null)
         {
             <div class="alert alert-danger">@TempData["Hata"]</div>
         }
 
-        <ul class="list-group list-group-flush">
+        <div class="list-group list-group-flush">
+            @* Sadece En Üst (Ana) kategorileri döngüye sokuyoruz, diğerleri otomatik aşağıya dizilecek *@
             @foreach (var anaKategori in Model)
             {
-                <li class="list-group-item bg-light border mb-2 rounded shadow-sm">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="fw-bold text-dark" style="font-size: 1.1rem;">
-                            <i class="fas fa-folder text-warning me-2"></i> @anaKategori.CategoryName
-
-                            @if (!string.IsNullOrEmpty(anaKategori.ImportUrl))
-                            {
-                                <button onclick="botuBaslat(@anaKategori.CategoryId)"
-                                        class="btn btn-sm text-white ms-2"
-                                        style="background-color: #6f42c1; border:none;"
-                                        title="Botu Çalıştır">
-                                    <i class="fas fa-play me-1"></i> Bot
-                                </button>
-                            }
-                        </div>
-                        <div>
-                            <a href="/Admin/Admin/ChangeOrder?id=@anaKategori.CategoryId&direction=up" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="fas fa-arrow-up"></i></a>
-                            <a href="/Admin/Admin/ChangeOrder?id=@anaKategori.CategoryId&direction=down" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="fas fa-arrow-down"></i></a>
-                            <a href="/Admin/Admin/CategoryCreate?parentId=@anaKategori.CategoryId" class="btn btn-sm btn-success py-1 ms-3" style="font-size: 0.8rem;">+ Alt Ekle</a>
-                            <a href="/Admin/Admin/CategoryEdit?id=@anaKategori.CategoryId" class="btn btn-sm btn-warning py-1 ms-1" style="font-size: 0.8rem;">Düzenle</a>
-                            <a href="/Admin/Admin/DeleteCategory?id=@anaKategori.CategoryId" class="btn btn-sm btn-danger py-1 ms-1" style="font-size: 0.8rem;" onclick="return confirm('Silmek istediğine emin misin?')">Sil</a>
-                        </div>
-                    </div>
-                </li>
-
-                @if (anaKategori.Children != null && anaKategori.Children.Any())
-                {
-                    <div class="ms-5 border-start border-3 border-secondary ps-3 mb-3">
-                        @foreach (var altKategori in anaKategori.Children.OrderBy(x => x.DisplayOrder))
-                        {
-                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <div class="text-secondary">
-                                    <i class="fas fa-level-up-alt fa-rotate-90 me-2"></i> @altKategori.CategoryName
-
-                                    @if (!string.IsNullOrEmpty(altKategori.ImportUrl))
-                                    {
-                                        <button onclick="botuBaslat(@altKategori.CategoryId)"
-                                                class="btn btn-sm text-white ms-2"
-                                                style="background-color: #6f42c1; border:none;"
-                                                title="Botu Çalıştır">
-                                            <i class="fas fa-play-circle me-1"></i> Bot
-                                        </button>
-                                    }
-                                </div>
-                                <div>
-                                    <a href="/Admin/Admin/ChangeOrder?id=@altKategori.CategoryId&direction=up" class="text-muted me-1"><small><i class="fas fa-chevron-up"></i></small></a>
-                                    <a href="/Admin/Admin/ChangeOrder?id=@altKategori.CategoryId&direction=down" class="text-muted me-2"><small><i class="fas fa-chevron-down"></i></small></a>
-                                    <a href="/Admin/Admin/CategoryEdit?id=@altKategori.CategoryId" class="text-warning me-2"><small>Düzenle</small></a>
-                                    <a href="/Admin/Admin/DeleteCategory?id=@altKategori.CategoryId" class="text-danger" onclick="return confirm('Silmek istediğine emin misin?')"><small>Sil</small></a>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
+                RenderCategory(anaKategori, 0);
             }
-        </ul>
+        </div>
     </div>
 </div>
 
@@ -111,11 +112,9 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     function botuBaslat(id) {
-        // 1. Modalı aç
         var myModal = new bootstrap.Modal(document.getElementById('botSonucModal'));
         myModal.show();
 
-        // 2. İçeriği "Yükleniyor" haline getir (önceki rapor kalmasın)
         $('#botModalBody').html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
@@ -124,12 +123,10 @@
             </div>
         `);
 
-        // 3. Arka planda botu çalıştır (AJAX)
         $.ajax({
             url: '/DataImport/StartTreeImport?mainCategoryId=' + id,
             type: 'GET',
             success: function(response) {
-                // İşlem bitince gelen raporu popup içine bas
                 $('#botModalBody').html(response);
             },
             error: function() {

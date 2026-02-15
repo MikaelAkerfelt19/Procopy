@@ -38,19 +38,18 @@ namespace Procopy.Areas.Admin.Controllers
             return View(model);
         }
         // KATEGORİ LİSTELEME
+        // KATEGORİ LİSTELEME (SINIRSIZ DERİNLİK)
         public IActionResult CategoryList()
         {
-            // ParentId'si boş olanlar (Ana Kategoriler) gelsin.
-            // Yanında da InverseParent (Alt Kategorileri) getirsin.
-            var kategoriler = _context.Categories
-                                      .Include(c => c.Children)
-                                      .Where(c => c.ParentId == null) // Sadece ana babalar
-                                      .OrderBy(c => c.DisplayOrder)   // Sıraya göre
+              var tumKategoriler = _context.Categories.ToList();
+
+            var anaKategoriler = tumKategoriler
+                                      .Where(c => c.ParentId == null)
+                                      .OrderBy(c => c.DisplayOrder)
                                       .ToList();
 
-            return View(kategoriler);
+            return View(anaKategoriler);
         }
-
         // YENİ EKLEME SAYFASI (GET)
         [HttpGet]
         public IActionResult CategoryCreate(int? parentId)

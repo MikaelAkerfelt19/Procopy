@@ -1,0 +1,77 @@
+﻿@using Procopy.Models
+@model Category
+@{
+    ViewData["Title"] = "Yeni Kategori Ekle";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    int? parentId = ViewBag.ParentId as int?;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4 border-bottom-success">
+            <div class="card-header py-3 bg-gradient-success text-white d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-folder-plus me-2"></i>
+                    @(parentId.HasValue ? "Yeni Alt Kategori Ekle" : "Yeni Ana Kategori Ekle")
+                </h6>
+                <a href="/Admin/Admin/CategoryList" class="btn btn-sm btn-light text-success fw-bold">
+                    <i class="fas fa-arrow-left"></i> Listeye Dön
+                </a>
+            </div>
+            <div class="card-body p-4">
+
+                <form method="post" action="/Admin/Admin/CategoryCreate">
+
+                    @if (parentId.HasValue)
+                    {
+                        <input type="hidden" name="ParentId" value="@parentId" />
+                    }
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Kategori Adı <span class="text-danger">*</span></label>
+                        <input type="text" name="CategoryName" class="form-control form-control-lg shadow-sm" placeholder="Örn: Plastik Kalemler" required>
+                    </div>
+
+                    <div class="mb-4 p-4 rounded shadow-sm" style="background-color: #f8f9fc; border-left: 5px solid #4e73df;">
+                        <label class="form-label fw-bold" style="color: #4e73df; font-size: 1.1rem;">
+                            <i class="fas fa-robot me-2"></i>Otomatik Ürün Çekme Linki (Bot)
+                        </label>
+                        <div class="input-group input-group-lg mb-2">
+                            <span class="input-group-text bg-primary text-white"><i class="fas fa-link"></i></span>
+                            <input type="url" name="ImportUrl" class="form-control" placeholder="Örn: https://www.turkuazpromosyon.com.tr/plastik-kalemler">
+                        </div>
+                        <div class="form-text text-muted">
+                            <i class="fas fa-info-circle text-primary"></i>
+                            Eğer buraya bir link girerseniz, kategori kaydedildikten sonra listede <b>"Bot"</b> butonu aktif olur. Bot arka planda (Hangfire ile) çalışarak tüm ürünleri, resimleri ve fiyatları bu kategoriye çekecektir.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Özel URL Yapısı (Slug) - İsteğe Bağlı</label>
+                        <input type="text" name="Slug" class="form-control" placeholder="bos-birakirsaniz-otomatik-olusur">
+                        <small class="text-muted">Boş bırakırsanız kategori adından otomatik üretilir.</small>
+                    </div>
+
+                    <div class="mb-4 form-check form-switch form-switch-lg p-3 border rounded bg-light d-flex align-items-center">
+                        <input class="form-check-input ms-0 me-3" type="checkbox" name="IsActive" value="true" checked style="width: 3rem; height: 1.5rem;">
+                        <label class="form-check-label fw-bold mb-0 pt-1" style="cursor: pointer;">Bu Kategori Sitede Aktif Olsun</label>
+                    </div>
+
+                    <div class="d-grid mt-5">
+                        <button type="submit" class="btn btn-success btn-lg py-3 shadow-lg hover-scale fw-bold">
+                            <i class="fas fa-save me-2"></i> Kategoriyi Kaydet
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-scale:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s;
+    }
+</style>
