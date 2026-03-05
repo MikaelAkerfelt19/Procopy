@@ -1,48 +1,45 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Procopy.Jobs;
 using Procopy.Models;
 
-namespace Procopy
-{
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-            // MVC ve View servislerini ekle
-            builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews();
 
-            // Veritabaný baðlantýsýný ekle
-            builder.Services.AddDbContext<ProcopyContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ProcopyContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            var app = builder.Build();
+// Bot için HTTP Client
+builder.Services.AddHttpClient();
 
-            // HTTP request pipeline yapýlandýrmasý
-            if (!app.Environment.IsDevelopment())
-            {
-                app.UseExceptionHandler("/Home/Error");
-                app.UseHsts();
-            }
+// Hangfire Kurulumu
+builder.Services.AddHangfire(cfg =>
+    cfg.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHangfireServer();
 
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
+// Asýl veri çekme iþlemini yapacak sýnýf
+builder.Services.AddScoped<TreeImportJob>();
 
-            app.UseRouting();
+var app = builder.Build();
 
-            app.UseAuthorization();
+app.UseStaticFiles();
+app.UseRouting();
 
-            // Area Rotasý (Admin paneli vb. için en üstte olmalý)
-            app.MapControllerRoute(
-                name: "areas",
-                pattern: "{area:exists}/{controller=Admin}/{action=Index}/{id?}");
+// Yetkilendirme (Giriþ iþlemleri için þart)
+app.UseAuthorization();
 
-            // Varsayýlan Rota
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
+// Hangfire Ýzleme Paneli
+app.UseHangfireDashboard("/hangfire");
 
-            app.Run();
-        }
-    }
-}
+// Admin Paneli Rotasý (Bunu eklemezsek Admin açýlmaz)
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Admin}/{action=Index}/{id?}");
+
+// Varsayýlan Rota
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();

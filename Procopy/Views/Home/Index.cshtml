@@ -135,13 +135,13 @@
                                         @if (item.OldPrice.HasValue && item.OldPrice.Value > item.Price.Value)
                                         {
                                             <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
-                                                <span class="text-muted text-decoration-line-through small">@item.OldPrice.Value.ToString("C0")</span>
-                                                <span class="text-danger fw-bold fs-5">@item.Price.Value.ToString("C0")</span>
+                                                <span class="text-muted text-decoration-line-through small">@item.OldPrice.Value.ToString("C2")</span>
+                                                <span class="text-danger fw-bold fs-5">@item.Price.Value.ToString("C2")</span>
                                             </div>
                                         }
                                         else
                                         {
-                                            <p class="text-primary fw-bold mb-3 fs-5">@item.Price.Value.ToString("C0")</p>
+                                            <p class="text-primary fw-bold mb-3 fs-5">@item.Price.Value.ToString("C2")</p>
                                         }
                                     }
                                     else

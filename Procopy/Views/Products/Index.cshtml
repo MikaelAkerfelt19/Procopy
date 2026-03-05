@@ -126,23 +126,21 @@
                                             @if (item.OldPrice.HasValue && item.OldPrice.Value > item.Price.Value)
                                             {
                                                 <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
-                                                    <span class="text-muted text-decoration-line-through small">@item.OldPrice.Value.ToString("C0")</span>
-                                                    <span class="text-danger fw-bold fs-5">@item.Price.Value.ToString("C0")</span>
+                                                    <span class="text-muted text-decoration-line-through small">@item.OldPrice.Value.ToString("C2")</span>
+                                                    <span class="text-danger fw-bold fs-5">@item.Price.Value.ToString("C2")</span>
                                                 </div>
                                             }
                                             else
                                             {
-                                                <p class="text-primary fw-bold fs-5 mb-3">@item.Price.Value.ToString("C0")</p>
+                                                <p class="text-primary fw-bold mb-3 fs-5">@item.Price.Value.ToString("C2")</p>
                                             }
                                         }
                                         else
                                         {
-                                            <p class="text-secondary fw-bold fs-6 mb-3">Fiyat Sorunuz</p>
+                                            <p class="text-secondary fw-bold mb-3 fs-6">Fiyat Sorunuz</p>
                                         }
 
-                                        <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-outline-danger w-100 btn-sm rounded-pill">
-                                            İncele
-                                        </a>
+                                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-light w-100 border stretched-link">İncele</a>
                                     </div>
                                 </div>
                             </div>
