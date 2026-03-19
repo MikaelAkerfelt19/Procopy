@@ -6,12 +6,28 @@
     ViewData["Title"] = "Ürün Yönetimi";
 }
 
+@if (TempData["Bilgi"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-1"></i> @TempData["Bilgi"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Ürün Listesi</h6>
-        <a href="/Admin/Admin/Create" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus"></i> Yeni Ürün Ekle
-        </a>
+        <div class="d-flex gap-2">
+            <a href="/Admin/Admin/SyncProductCategories"
+               class="btn btn-warning btn-sm"
+               onclick="return confirm('Tüm ürünler kendi kategorilerine bağlanacak. Devam edilsin mi?');"
+               title="Bot ile eklenen ürünleri kategori filtrelerine bağlar">
+                <i class="fas fa-sync-alt"></i> Kategorileri Senkronize Et
+            </a>
+            <a href="/Admin/Admin/Create" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Yeni Ürün Ekle
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">

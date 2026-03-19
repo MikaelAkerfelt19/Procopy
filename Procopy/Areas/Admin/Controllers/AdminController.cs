@@ -194,13 +194,50 @@ namespace Procopy.Areas.Admin.Controllers
         }
         public IActionResult Products()
         {
-            // Ürünleri çekerken kategorilerini de (Include) yanına alıyoruz.
-            // Böylece tabloda Kategori ID'si yerine Kategori Adını gösterebiliriz.
-            var urunler = _context.Products
-                                  .Include(p => p.Category) // Kategoriyi dahil et
+            // INNER JOIN sorununu önlemek için kategorileri ayrı yükle
+            var kategoriler = _context.Categories.AsNoTracking()
+                                      .ToDictionary(c => c.CategoryId);
+
+            var urunler = _context.Products.AsNoTracking()
+                                  .OrderByDescending(p => p.ProductId)
                                   .ToList();
 
+            // Navigation property'yi elle bağla (LEFT JOIN etkisi)
+            foreach (var u in urunler)
+            {
+                if (kategoriler.TryGetValue(u.CategoryId, out var cat))
+                    u.Category = cat;
+            }
+
             return View(urunler);
+        }
+
+        // Mevcut ürünleri ProductCategories tablosuyla senkronize eder
+        public IActionResult SyncProductCategories()
+        {
+            var urunler = _context.Products.AsNoTracking().ToList();
+            int eklenen = 0;
+
+            foreach (var urun in urunler)
+            {
+                bool mevcutMu = _context.ProductCategories
+                    .Any(pc => pc.ProductId == urun.ProductId && pc.CategoryId == urun.CategoryId);
+
+                if (!mevcutMu && urun.CategoryId > 0)
+                {
+                    _context.ProductCategories.Add(new ProductCategory
+                    {
+                        ProductId = urun.ProductId,
+                        CategoryId = urun.CategoryId,
+                        IsMainCategory = true
+                    });
+                    eklenen++;
+                }
+            }
+
+            _context.SaveChanges();
+            TempData["Bilgi"] = $"Senkronizasyon tamamlandı. {eklenen} ürün kategoriye bağlandı.";
+            return RedirectToAction("Products");
         }
  
         [HttpGet]

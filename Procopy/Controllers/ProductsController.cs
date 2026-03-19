@@ -14,62 +14,107 @@ namespace Procopy.Controllers
         }
 
         // GET: Products
-        public async Task<IActionResult> Index(string category)
+        public async Task<IActionResult> Index(string category, int page = 1)
         {
-            // 1. Temel Sorgu: Sadece aktif ürünleri getir ve ilişkili tabloları dahil et
+            const int pageSize = 24;
+
+            // Sidebar için tüm aktif kategorileri çek (küçük veri - hızlı)
+            var tumKategoriler = await _context.Categories
+                .Where(c => c.IsActive == true)
+                .AsNoTracking()
+                .ToListAsync();
+
+            ViewBag.Categories = tumKategoriler;
+
+            // Temel sorgu — sadece Category (display için), AsNoTracking ile izleme yok
             var productsQuery = _context.Products
                 .Include(p => p.Category)
-                .Include(p => p.ProductCategories)
-                    .ThenInclude(pc => pc.Category)
                 .Where(p => p.IsActive == true)
+                .AsNoTracking()
                 .AsQueryable();
-
-            // Sidebar için tüm aktif kategorileri çek
-            ViewBag.Categories = await _context.Categories.Where(c => c.IsActive == true).ToListAsync();
 
             if (!string.IsNullOrEmpty(category))
             {
-                // A) İNDİRİM KATEGORİSİ ÖZEL DURUMU
+                // A) İNDİRİM KATEGORİSİ
                 if (category == "indirimli-firsatlar")
                 {
                     ViewBag.PageTitle = "🔥 İndirimli Fırsatlar";
                     ViewBag.CurrentSlug = category;
-
-                    // Eski fiyatı olan ve indirimde olan ürünleri filtrele
                     productsQuery = productsQuery.Where(p => p.OldPrice.HasValue && p.OldPrice > p.Price);
                 }
                 else
                 {
-                    // B) NORMAL KATEGORİ FİLTRELEME
-                    // Veritabanındaki slug ile eşleşen kategoriyi bul
-                    var selectedCat = await _context.Categories
-                        .FirstOrDefaultAsync(c => c.Slug.ToLower() == category.ToLower());
+                    // B) NORMAL KATEGORİ — slug ile kategoriyi bul
+                    var selectedCat = tumKategoriler
+                        .FirstOrDefault(c => c.Slug.ToLower() == category.ToLower());
 
                     if (selectedCat != null)
                     {
                         ViewBag.PageTitle = selectedCat.CategoryName;
                         ViewBag.CurrentSlug = selectedCat.Slug;
 
-                        if (selectedCat.ParentId == null)
+                        // Tüm alt kategorileri bul (her derinlikte)
+                        var catIds = new HashSet<int>();
+                        void ToplaAltKategoriler(int parentId)
                         {
-                            // ANA KATEGORİ SEÇİLDİ: 
-                            // Ürün ya bu ana kategoriye ya da bu kategorinin alt kategorilerinden birine bağlı olmalı.
-                            productsQuery = productsQuery.Where(p =>
-                                p.ProductCategories.Any(pc =>
-                                    pc.CategoryId == selectedCat.CategoryId ||
-                                    pc.Category.ParentId == selectedCat.CategoryId));
+                            catIds.Add(parentId);
+                            foreach (var alt in tumKategoriler.Where(c => c.ParentId == parentId))
+                                ToplaAltKategoriler(alt.CategoryId);
                         }
-                        else
+                        ToplaAltKategoriler(selectedCat.CategoryId);
+
+                        // Seçilen kategorinin doğrudan çocukları var mı?
+                        var dorudanCocuklar = tumKategoriler
+                            .Where(c => c.ParentId == selectedCat.CategoryId)
+                            .OrderBy(c => c.DisplayOrder)
+                            .ToList();
+
+                        if (dorudanCocuklar.Any())
                         {
-                            // ALT KATEGORİ SEÇİLDİ:
-                            // Ürün direkt olarak bu alt kategoriye bağlı olmalı.
-                            productsQuery = productsQuery.Where(p =>
-                                p.ProductCategories.Any(pc => pc.CategoryId == selectedCat.CategoryId));
+                            // GRUPLU GÖRÜNÜM: Her alt kategori için önizleme
+                            var gruplar = new List<ProductGroupViewModel>();
+
+                            foreach (var cocuk in dorudanCocuklar)
+                            {
+                                var cocukIds = new HashSet<int>();
+                                void ToplaCocukIds(int pid)
+                                {
+                                    cocukIds.Add(pid);
+                                    foreach (var c in tumKategoriler.Where(c => c.ParentId == pid))
+                                        ToplaCocukIds(c.CategoryId);
+                                }
+                                ToplaCocukIds(cocuk.CategoryId);
+
+                                var urunler = await _context.Products
+                                    .Include(p => p.Category)
+                                    .Where(p => p.IsActive == true && cocukIds.Contains(p.CategoryId))
+                                    .AsNoTracking()
+                                    .OrderByDescending(p => p.ProductId)
+                                    .Take(8)
+                                    .ToListAsync();
+
+                                var toplam = await _context.Products
+                                    .CountAsync(p => p.IsActive == true && cocukIds.Contains(p.CategoryId));
+
+                                if (urunler.Any())
+                                    gruplar.Add(new ProductGroupViewModel
+                                    {
+                                        Category = cocuk,
+                                        Products = urunler,
+                                        TotalCount = toplam
+                                    });
+                            }
+
+                            ViewBag.ProductGroups = gruplar;
+                            ViewBag.Category = category;
+                            return View(new List<Product>());
                         }
+
+                        // DÜZLEM GÖRÜNÜM: Yaprak kategori
+                        productsQuery = productsQuery.Where(p => catIds.Contains(p.CategoryId));
                     }
                     else
                     {
-                        // Kategori slug bulunamadıysa "Tüm Ürünler"e geri dön
                         ViewBag.PageTitle = "Tüm Ürünler";
                         ViewBag.CurrentSlug = "";
                     }
@@ -81,8 +126,19 @@ namespace Procopy.Controllers
                 ViewBag.CurrentSlug = "";
             }
 
-            // Sonuçları ID'ye göre azalan sırada getir (En yeni en üstte)
-            var products = await productsQuery.OrderByDescending(p => p.ProductId).ToListAsync();
+            // Sayfalama (düzlem görünüm)
+            var toplamUrun = await productsQuery.CountAsync();
+            var products = await productsQuery
+                .OrderByDescending(p => p.ProductId)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)toplamUrun / pageSize);
+            ViewBag.TotalCount = toplamUrun;
+            ViewBag.Category = category;
+
             return View(products);
         }
 
@@ -105,19 +161,31 @@ namespace Procopy.Controllers
         }
 
         // GET: Products/Details/5
-        public async Task<IActionResult> Details(int? id)
+        // GET: Products/Details/5010SYH
+        public async Task<IActionResult> Details(string id)
         {
-            if (id == null) return NotFound();
+            if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
             var product = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.ProductImages)
+                .Include(p => p.ProductOptions)
+                    .ThenInclude(o => o.Values)  // ← Values kullanıyoruz
                 .Include(p => p.ProductCategories)
                     .ThenInclude(pc => pc.Category)
-                .FirstOrDefaultAsync(m => m.ProductId == id);
+                .FirstOrDefaultAsync(m => m.ProductCode == id);
 
             if (product == null) return NotFound();
 
+            var related = await _context.Products
+                .Include(p => p.Category)
+                .Where(p => p.CategoryId == product.CategoryId
+                         && p.ProductId != product.ProductId
+                         && p.IsActive == true)
+                .Take(4)
+                .ToListAsync();
+
+            ViewBag.RelatedProducts = related;
             return View(product);
         }
     }

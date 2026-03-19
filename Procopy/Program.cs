@@ -37,7 +37,14 @@ app.MapControllerRoute(
     name: "areas",
     pattern: "{area:exists}/{controller=Admin}/{action=Index}/{id?}");
 
-// Varsayýlan Rota
+// Ürün detay route'u — /Products/5010SYH
+app.MapControllerRoute(
+    name: "product-detail",
+    pattern: "Products/{id}",
+    defaults: new { controller = "Products", action = "Details" }
+);
+
+// Varsayýlan Rota (bu kalýyor, deðiþmiyor)
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
