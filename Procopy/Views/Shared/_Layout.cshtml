@@ -128,9 +128,95 @@
             .footer-social a:hover {
                 color: var(--pro-red);
             }
+
+    /* ===================== DİYAFRAM AÇILIŞ ANİMASYONU ===================== */
+    #procopy-loader {
+        position: fixed;
+        inset: 0;
+        background: #1A1A1A;
+        z-index: 99999;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Diyafram kasası — tüm bıçakları barındırır, döner */
+    .iris-wrap {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        animation: irisRotate 1.6s cubic-bezier(.4,0,.2,1) forwards;
+    }
+
+    /* Her bıçak: dar uzun elips, merkeze dayalı transform-origin */
+    .iris-blade {
+        position: absolute;
+        width: 60vmax;
+        height: 60vmax;
+        background: var(--pro-red);
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        /* Bıçakları merkezin hemen üstünde konumlandır */
+        top: calc(-60vmax + 2vmax);
+        left: -30vmax;
+        transform-origin: 30vmax 60vmax; /* dönme ekseni: merkez */
+        opacity: 0.95;
+    }
+
+    /* Her bıçak kendi açısına döndürülür */
+    .iris-blade:nth-child(1) { transform: rotate(0deg); }
+    .iris-blade:nth-child(2) { transform: rotate(60deg); }
+    .iris-blade:nth-child(3) { transform: rotate(120deg); }
+    .iris-blade:nth-child(4) { transform: rotate(180deg); }
+    .iris-blade:nth-child(5) { transform: rotate(240deg); }
+    .iris-blade:nth-child(6) { transform: rotate(300deg); }
+
+    /* Tüm kasayı döndürerek kapanıp açılır */
+    @@keyframes irisRotate {
+        0%   { transform: translate(-50%,-50%) rotate(-70deg); opacity: 1; }  /* açık */
+        40%  { transform: translate(-50%,-50%) rotate(0deg);   opacity: 1; }  /* kapandı */
+        70%  { transform: translate(-50%,-50%) rotate(0deg);   opacity: 1; }  /* bekle */
+        100% { transform: translate(-50%,-50%) rotate(-70deg); opacity: 0; }  /* açıldı + solar */
+    }
+
+    /* Merkezdeki logo */
+    .iris-logo {
+        position: relative;
+        z-index: 1;
+        width: clamp(80px, 15vw, 160px);
+        filter: brightness(0) invert(1);
+        animation: irisLogoFade 1.6s cubic-bezier(.4,0,.2,1) forwards;
+    }
+
+    @@keyframes irisLogoFade {
+        0%   { opacity: 0; transform: scale(0.6); }
+        35%  { opacity: 1; transform: scale(1);   }
+        75%  { opacity: 1; transform: scale(1);   }
+        100% { opacity: 0; transform: scale(1.1); }
+    }
+    /* ================================================================= */
     </style>
 </head>
 <body>
+
+<!-- ===================== DİYAFRAM AÇILIŞ ANİMASYONU ===================== -->
+@if (ViewContext.RouteData.Values["controller"]?.ToString()?.Equals("Home", StringComparison.OrdinalIgnoreCase) == true)
+{
+    <div id="procopy-loader">
+        <div class="iris-wrap">
+            <div class="iris-blade"></div>
+            <div class="iris-blade"></div>
+            <div class="iris-blade"></div>
+            <div class="iris-blade"></div>
+            <div class="iris-blade"></div>
+            <div class="iris-blade"></div>
+        </div>
+        <img src="~/images/logo.png" alt="ProCopy" class="iris-logo">
+    </div>
+}
+<!-- ================================================================= -->
 
     <header>
         <nav class="navbar navbar-expand-lg sticky-top">
@@ -218,6 +304,15 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        /* Diyafram animasyonu — her ziyarette çalışır, 1.8sn sonra DOM'dan kaldır */
+        (function () {
+            var loader = document.getElementById('procopy-loader');
+            if (!loader) return;
+            setTimeout(function () { loader.remove(); }, 1800);
+        })();
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

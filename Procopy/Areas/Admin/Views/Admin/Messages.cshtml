@@ -1,0 +1,281 @@
+@model List<Procopy.Models.ContactMessage>
+@{
+    ViewData["Title"] = "Gelen Mesajlar";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    int currentPage = (int)ViewBag.Page;
+    int totalPages  = (int)ViewBag.TotalPages;
+    int total       = (int)ViewBag.Total;
+    string search     = ViewBag.Search     ?? "";
+    string dateFilter = ViewBag.DateFilter ?? "";
+    int cp = currentPage; // alias - @page kelimesi Razor directive çakışması yaratır
+}
+
+<!-- İstatistik Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;">
+                    <i class="fa-solid fa-envelope fa-lg text-primary"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-dark">@ViewBag.TotalCount</div>
+                    <div class="text-muted small">Toplam Mesaj</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;">
+                    <i class="fa-solid fa-calendar-day fa-lg text-success"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-dark">@ViewBag.TodayCount</div>
+                    <div class="text-muted small">Bugün</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;">
+                    <i class="fa-solid fa-calendar-week fa-lg text-warning"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-dark">@ViewBag.WeekCount</div>
+                    <div class="text-muted small">Bu Hafta</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;">
+                    <i class="fa-solid fa-calendar fa-lg text-info"></i>
+                </div>
+                <div>
+                    <div class="fs-2 fw-bold text-dark">@ViewBag.MonthCount</div>
+                    <div class="text-muted small">Bu Ay</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtre & Arama -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="form-label text-muted small mb-1">Ad, e-posta veya mesajda ara</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" name="search" value="@search" class="form-control" placeholder="Arama..." />
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label text-muted small mb-1">Tarih Filtresi</label>
+                <select name="dateFilter" class="form-select">
+                    <option value="" selected="@(dateFilter == "" ? "selected" : null)">Tümü</option>
+                    <option value="today"  selected="@(dateFilter == "today"  ? "selected" : null)">Bugün</option>
+                    <option value="week"   selected="@(dateFilter == "week"   ? "selected" : null)">Son 7 Gün</option>
+                    <option value="month"  selected="@(dateFilter == "month"  ? "selected" : null)">Son 30 Gün</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1"><i class="fa-solid fa-filter me-1"></i> Filtrele</button>
+                @if (!string.IsNullOrEmpty(search) || !string.IsNullOrEmpty(dateFilter))
+                {
+                    <a href="/Admin/Admin/Messages" class="btn btn-outline-secondary"><i class="fa-solid fa-xmark"></i></a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Mesaj Tablosu -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <span class="fw-semibold text-dark"><i class="fa-solid fa-inbox me-2 text-primary"></i>Mesajlar</span>
+        <span class="badge bg-secondary">@total sonuç</span>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="fa-solid fa-envelope-open fa-3x mb-3 opacity-25"></i>
+                <p>Henüz mesaj yok.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Gönderen</th>
+                            <th>Konu</th>
+                            <th class="d-none d-md-table-cell">Mesaj</th>
+                            <th class="d-none d-lg-table-cell">Tarih</th>
+                            <th style="width:80px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var msg in Model)
+                        {
+                            <tr>
+                                <td class="text-muted small">@msg.Id</td>
+                                <td>
+                                    <div class="fw-semibold">@msg.Name</div>
+                                    <a href="mailto:@msg.Email" class="text-muted small text-decoration-none">@msg.Email</a>
+                                    @if (!string.IsNullOrEmpty(msg.Phone))
+                                    {
+                                        <div><a href="tel:@msg.Phone" class="text-muted small text-decoration-none"><i class="fa-solid fa-phone fa-xs me-1"></i>@msg.Phone</a></div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(msg.Subject))
+                                    {
+                                        <span class="badge bg-light text-dark border">@msg.Subject</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                                <td class="d-none d-md-table-cell" style="max-width:280px;">
+                                    <span class="text-muted small" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">@msg.Message</span>
+                                </td>
+                                <td class="d-none d-lg-table-cell text-muted small text-nowrap">
+                                    <i class="fa-regular fa-clock me-1"></i>@msg.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal" data-bs-target="#msgModal"
+                                                data-id="@msg.Id"
+                                                data-name="@msg.Name"
+                                                data-email="@msg.Email"
+                                                data-phone="@(msg.Phone ?? "")"
+                                                data-subject="@(msg.Subject ?? "—")"
+                                                data-message="@msg.Message"
+                                                data-date="@msg.CreatedAt.ToString("dd.MM.yyyy HH:mm")"
+                                                data-ip="@(msg.IpAddress ?? "—")"
+                                                title="Detay">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                        <a href="/Admin/Admin/DeleteMessage?id=@msg.Id"
+                                           class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('Bu mesajı silmek istediğinize emin misiniz?')"
+                                           title="Sil">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @if (totalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+            <small class="text-muted">Sayfa @(cp) / @totalPages</small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    @if (cp > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Messages","Admin",new{area="Admin",page=cp-1,search,dateFilter})"><i class="fa-solid fa-chevron-left"></i></a>
+                        </li>
+                    }
+                    @for (int i = Math.Max(1, cp - 2); i <= Math.Min(totalPages, cp + 2); i++)
+                    {
+                        <li class="page-item @(i == cp ? "active" : "")">
+                            <a class="page-link" href="@Url.Action("Messages","Admin",new{area="Admin",page=i,search,dateFilter})">@i</a>
+                        </li>
+                    }
+                    @if (cp < totalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Messages","Admin",new{area="Admin",page=cp+1,search,dateFilter})"><i class="fa-solid fa-chevron-right"></i></a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+<!-- Mesaj Detay Modal -->
+<div class="modal fade" id="msgModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-envelope-open me-2"></i>Mesaj Detayı</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold text-uppercase">Ad Soyad</label>
+                        <div id="modal-name" class="fw-semibold fs-6"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold text-uppercase">E-posta</label>
+                        <div><a id="modal-email" href="#" class="text-decoration-none"></a></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold text-uppercase">Telefon</label>
+                        <div id="modal-phone" class="text-muted"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold text-uppercase">Konu</label>
+                        <div id="modal-subject"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold text-uppercase">Tarih</label>
+                        <div id="modal-date" class="text-muted small"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold text-uppercase">IP Adresi</label>
+                        <div id="modal-ip" class="text-muted small font-monospace"></div>
+                    </div>
+                </div>
+                <hr>
+                <label class="text-muted small fw-semibold text-uppercase">Mesaj İçeriği</label>
+                <div id="modal-message" class="mt-2 p-3 bg-light rounded" style="white-space:pre-wrap;line-height:1.7;"></div>
+            </div>
+            <div class="modal-footer">
+                <a id="modal-mailto" href="#" class="btn btn-success"><i class="fa-solid fa-reply me-1"></i> E-posta Gönder</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('msgModal').addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        document.getElementById('modal-name').textContent    = btn.dataset.name;
+        document.getElementById('modal-phone').textContent   = btn.dataset.phone || '—';
+        document.getElementById('modal-subject').textContent = btn.dataset.subject;
+        document.getElementById('modal-date').textContent    = btn.dataset.date;
+        document.getElementById('modal-ip').textContent      = btn.dataset.ip;
+        document.getElementById('modal-message').textContent = btn.dataset.message;
+
+        var emailEl = document.getElementById('modal-email');
+        emailEl.textContent = btn.dataset.email;
+        emailEl.href = 'mailto:' + btn.dataset.email;
+
+        document.getElementById('modal-mailto').href = 'mailto:' + btn.dataset.email;
+    });
+</script>

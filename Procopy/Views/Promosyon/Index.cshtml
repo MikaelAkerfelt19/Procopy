@@ -1,0 +1,510 @@
+@using Procopy.Models
+@model PromosyonCategoryViewModel
+
+@{
+    ViewData["Title"] = Model.ActiveCategory?.Name ?? "Promosyon Ürünleri";
+
+    // Recursive: bir kategorinin aktif zincirde olup olmadığını kontrol et
+    bool IsInActivePath(CategoryMenuItem item, string? activeSlug)
+    {
+        if (string.IsNullOrEmpty(activeSlug)) return false;
+        if (item.Slug == activeSlug) return true;
+        return item.Children.Any(c => IsInActivePath(c, activeSlug));
+    }
+}
+
+<div class="promo-wrapper">
+
+    <!-- ===== SAYFA BAŞLIĞI ===== -->
+    <div class="promo-page-header">
+        <div class="container">
+            <div class="d-flex align-items-center gap-3">
+                <div class="header-icon-box">
+                    <i class="fas fa-gift"></i>
+                </div>
+                <div>
+                    <nav class="promo-breadcrumb" aria-label="breadcrumb">
+                        <a asp-controller="Home" asp-action="Index">Ana Sayfa</a>
+                        <span class="sep">›</span>
+                        <a asp-controller="Promosyon" asp-action="Index">Promosyon</a>
+                        @if (Model.ActiveCategory != null)
+                        {
+                            <span class="sep">›</span>
+                            <span class="current">@Model.ActiveCategory.Name</span>
+                        }
+                    </nav>
+                    <h1 class="page-title">@(Model.ActiveCategory?.Name ?? "Promosyon Ürünleri")</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ANA İÇERİK ===== -->
+    <div class="container py-4">
+        <div class="promo-layout">
+
+            <!-- ===== SOL SIDEBAR ===== -->
+            <aside class="promo-sidebar">
+                <div class="sidebar-header">
+                    <h3>Kategoriler</h3>
+                    <div class="sidebar-search">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+                        </svg>
+                        <input type="text" id="categorySearch" placeholder="Kategori ara..." autocomplete="off" />
+                    </div>
+                </div>
+
+                <ul class="category-list" id="categoryList">
+                    <!-- Tümü -->
+                    <li class="category-item">
+                        <a asp-controller="Promosyon" asp-action="Index"
+                           class="@(Model.ActiveCategory == null ? "active" : "")">
+                            <span class="cat-icon"><i class="fas fa-th"></i></span>
+                            <span class="cat-label">Tüm Ürünler</span>
+                            <span class="cat-count">@Model.Categories.Sum(c => c.ProductCount)</span>
+                        </a>
+                    </li>
+
+                    @foreach (var cat in Model.Categories)
+                    {
+                        bool isParentActive = IsInActivePath(cat, Model.CurrentCategorySlug);
+                        bool isSelfActive = Model.CurrentCategorySlug == cat.Slug;
+
+                        <li class="category-item @(cat.Children.Any() ? "has-children" : "") @(isParentActive ? "is-open" : "")">
+                            <a asp-controller="Promosyon" asp-action="Index" asp-route-category="@cat.Slug"
+                               class="@(isSelfActive ? "active" : "") @(isParentActive && !isSelfActive ? "parent-active" : "")">
+                                <span class="cat-icon"><i class="@cat.IconClass"></i></span>
+                                <span class="cat-label">@cat.Name</span>
+                                @if (cat.Children.Any())
+                                {
+                                    <span class="cat-chevron"><i class="fas fa-chevron-right"></i></span>
+                                }
+                                <span class="cat-count">@cat.ProductCount</span>
+                            </a>
+
+                            @if (cat.Children.Any())
+                            {
+                                <ul class="sub-category-list @(isParentActive ? "expanded" : "")">
+                                    @foreach (var sub in cat.Children)
+                                    {
+                                        bool isSubActive = Model.CurrentCategorySlug == sub.Slug;
+                                        bool isSubParentActive = IsInActivePath(sub, Model.CurrentCategorySlug);
+
+                                        <li class="category-item @(sub.Children.Any() ? "has-children" : "") @(isSubParentActive ? "is-open" : "")">
+                                            <a asp-controller="Promosyon" asp-action="Index" asp-route-category="@sub.Slug"
+                                               class="sub-item @(isSubActive ? "active" : "") @(isSubParentActive && !isSubActive ? "parent-active" : "")">
+                                                <span class="cat-icon sub-icon">
+                                                    @if (sub.Children.Any())
+                                                    {
+                                                        <i class="fas fa-folder"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-circle" style="font-size:6px;"></i>
+                                                    }
+                                                </span>
+                                                <span class="cat-label">@sub.Name</span>
+                                                @if (sub.Children.Any())
+                                                {
+                                                    <span class="cat-chevron"><i class="fas fa-chevron-right"></i></span>
+                                                }
+                                                <span class="cat-count">@sub.ProductCount</span>
+                                            </a>
+
+                                            @if (sub.Children.Any())
+                                            {
+                                                <ul class="sub-category-list level-3 @(isSubParentActive ? "expanded" : "")">
+                                                    @foreach (var subsub in sub.Children)
+                                                    {
+                                                        <li class="category-item">
+                                                            <a asp-controller="Promosyon" asp-action="Index" asp-route-category="@subsub.Slug"
+                                                               class="sub-item level-3-item @(Model.CurrentCategorySlug == subsub.Slug ? "active" : "")">
+                                                                <span class="cat-icon sub-icon"><i class="fas fa-circle" style="font-size:5px;"></i></span>
+                                                                <span class="cat-label">@subsub.Name</span>
+                                                                <span class="cat-count">@subsub.ProductCount</span>
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            </aside>
+
+            <!-- ===== ANA ALAN ===== -->
+            <main class="promo-main">
+                <div class="promo-topbar">
+                    <div class="promo-topbar-left">
+                        <span class="result-count">
+                            <strong>@Model.TotalCount</strong> ürün
+                            @if (Model.ActiveCategory != null)
+                            {
+                                <span class="text-muted">— @Model.ActiveCategory.Name</span>
+                            }
+                        </span>
+                        @if (Model.TotalPages > 1)
+                        {
+                            <span class="page-info">Sayfa @Model.CurrentPage / @Model.TotalPages</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="promo-content">
+                    @if (Model.Products != null && Model.Products.Any())
+                    {
+                        <div class="product-grid">
+                            @foreach (var item in Model.Products)
+                            {
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductCode"
+                                   class="product-card">
+                                    <div class="card-img">
+                                        @if (!string.IsNullOrEmpty(item.MainImageUrl))
+                                        {
+                                            <img src="@item.MainImageUrl" alt="@item.ProductName" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <div class="card-img-placeholder"><i class="fas fa-gift"></i></div>
+                                        }
+                                        @if (item.OldPrice.HasValue && item.OldPrice.Value > item.Price.GetValueOrDefault())
+                                        {
+                                            <span class="discount-badge">İndirim</span>
+                                        }
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-cat">@item.Category?.CategoryName</p>
+                                        <h4 class="card-name" title="@item.ProductName">@item.ProductName</h4>
+                                        <div class="card-price">
+                                            @if (item.Price.HasValue && item.Price.Value > 0)
+                                            {
+                                                @if (item.OldPrice.HasValue && item.OldPrice.Value > item.Price.Value)
+                                                {
+                                                    <span class="old-price">@item.OldPrice.Value.ToString("C2")</span>
+                                                    <span class="new-price">@item.Price.Value.ToString("C2")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="new-price">@item.Price.Value.ToString("C2")</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="ask-price">Fiyat Sorunuz</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-box-open"></i>
+                            <p>Bu kategoride henüz ürün bulunmuyor.</p>
+                            <a asp-controller="Promosyon" asp-action="Index" class="btn-back">Tüm Ürünlere Dön</a>
+                        </div>
+                    }
+
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav class="promo-pagination">
+                            @if (Model.CurrentPage > 1)
+                            {
+                                <a asp-controller="Promosyon" asp-action="Index"
+                                   asp-route-category="@Model.CurrentCategorySlug"
+                                   asp-route-page="@(Model.CurrentPage - 1)" class="page-btn">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            }
+                            @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                            {
+                                <a asp-controller="Promosyon" asp-action="Index"
+                                   asp-route-category="@Model.CurrentCategorySlug"
+                                   asp-route-page="@i"
+                                   class="page-btn @(i == Model.CurrentPage ? "active" : "")">@i</a>
+                            }
+                            @if (Model.CurrentPage < Model.TotalPages)
+                            {
+                                <a asp-controller="Promosyon" asp-action="Index"
+                                   asp-route-category="@Model.CurrentCategorySlug"
+                                   asp-route-page="@(Model.CurrentPage + 1)" class="page-btn">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            }
+                        </nav>
+                    }
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+
+<style>
+    .promo-page-header {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        border-bottom: 3px solid var(--pro-red);
+        padding: 28px 0 24px;
+    }
+
+    .header-icon-box {
+        width: 52px; height: 52px;
+        background: rgba(214,0,28,0.18);
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem; color: #fff; flex-shrink: 0;
+    }
+
+    .promo-breadcrumb {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 12.5px; margin-bottom: 6px;
+    }
+        .promo-breadcrumb a { color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .promo-breadcrumb a:hover { color: #fff; }
+        .promo-breadcrumb .sep { color: rgba(255,255,255,0.3); font-size: 11px; }
+        .promo-breadcrumb .current { color: var(--pro-red); font-weight: 600; }
+
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #fff; margin: 0; letter-spacing: -0.3px; }
+
+    /* LAYOUT */
+    .promo-layout {
+        display: flex; gap: 0; background: #fff;
+        border: 1px solid #E8E8EE; border-radius: 14px;
+        overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        min-height: 600px;
+    }
+
+    /* SIDEBAR */
+    .promo-sidebar {
+        width: 270px; min-width: 270px;
+        background: #FAFAFA;
+        border-right: 1px solid #E8E8EE;
+        display: flex; flex-direction: column;
+    }
+
+    .sidebar-header {
+        padding: 18px 16px 14px;
+        border-bottom: 1px solid #E8E8EE;
+    }
+        .sidebar-header h3 {
+            font-size: 10.5px; font-weight: 700;
+            letter-spacing: 1.3px; text-transform: uppercase;
+            color: #9E9EAE; margin: 0 0 12px 0;
+        }
+
+    .sidebar-search { position: relative; }
+        .sidebar-search svg {
+            position: absolute; left: 9px; top: 50%;
+            transform: translateY(-50%); color: #9E9EAE; pointer-events: none;
+        }
+        .sidebar-search input {
+            width: 100%; padding: 8px 10px 8px 32px;
+            border: 1px solid #E8E8EE; border-radius: 6px;
+            font-size: 13px; font-family: inherit;
+            background: #fff; color: #1A1A2E;
+            transition: all 0.2s; outline: none; box-sizing: border-box;
+        }
+            .sidebar-search input:focus {
+                border-color: var(--pro-red);
+                box-shadow: 0 0 0 3px rgba(214,0,28,0.08);
+            }
+            .sidebar-search input::placeholder { color: #B0B0C0; }
+
+    /* KATEGORİ LİSTESİ */
+    .category-list, .sub-category-list {
+        list-style: none; padding: 8px; margin: 0;
+    }
+
+    .category-list {
+        flex: 1; overflow-y: auto; max-height: calc(100vh - 220px);
+    }
+        .category-list::-webkit-scrollbar { width: 3px; }
+        .category-list::-webkit-scrollbar-thumb { background: #E0E0EA; border-radius: 4px; }
+
+    .sub-category-list {
+        padding: 0 0 0 14px;
+        max-height: 0; overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+        .sub-category-list.expanded { max-height: 1000px; }
+
+    .sub-category-list.level-3 { padding-left: 14px; }
+
+    .category-item { margin-bottom: 1px; }
+
+    .category-item a {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 10px; border-radius: 6px;
+        font-size: 13.5px; color: #4A4A5A;
+        text-decoration: none;
+        transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+    }
+        .category-item a:hover { background: #fff; color: #1A1A2E; }
+        .category-item a.active {
+            background: var(--pro-red); color: #fff;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(214,0,28,0.22);
+        }
+        .category-item a.parent-active { color: var(--pro-red); font-weight: 600; }
+        .category-item a.sub-item { font-size: 13px; padding: 7px 10px; }
+        .category-item a.level-3-item { font-size: 12.5px; padding: 6px 10px; color: #6A6A7A; }
+        .category-item a.level-3-item.active { background: var(--pro-red); color: #fff; }
+
+    .cat-icon {
+        width: 18px; height: 18px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0; font-size: 12px;
+    }
+    .sub-icon { opacity: 0.7; }
+
+    .cat-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .cat-count {
+        flex-shrink: 0; font-size: 10.5px; font-weight: 500;
+        padding: 1px 7px; border-radius: 99px;
+        background: rgba(0,0,0,0.06);
+    }
+    .category-item a.active .cat-count { background: rgba(255,255,255,0.22); }
+
+    .cat-chevron {
+        flex-shrink: 0; font-size: 9px; color: #B0B0C0;
+        transition: transform 0.25s ease; margin-right: 2px;
+    }
+    .category-item.is-open > a .cat-chevron { transform: rotate(90deg); }
+    .category-item a.active .cat-chevron { color: rgba(255,255,255,0.7); }
+
+    /* MAIN */
+    .promo-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #F5F5F7; }
+
+    .promo-topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 22px; background: #fff; border-bottom: 1px solid #E8E8EE;
+    }
+    .promo-topbar-left { display: flex; align-items: center; gap: 14px; }
+    .result-count { font-size: 14px; color: #1A1A2E; }
+    .result-count strong { font-weight: 700; }
+    .page-info { font-size: 12.5px; color: #9E9EAE; }
+
+    /* PRODUCT GRID */
+    .promo-content { flex: 1; padding: 18px; }
+
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+        gap: 14px;
+    }
+
+    .product-card {
+        background: #fff; border: 1px solid #E8E8EE; border-radius: 10px;
+        overflow: hidden; text-decoration: none; color: inherit;
+        display: flex; flex-direction: column;
+        transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+        .product-card:hover {
+            border-color: #D0D0DA;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            transform: translateY(-3px);
+            color: inherit; text-decoration: none;
+        }
+
+    .card-img {
+        width: 100%; aspect-ratio: 1/1;
+        background: #F5F5F7; display: flex; align-items: center;
+        justify-content: center; overflow: hidden; position: relative;
+    }
+        .card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+    .product-card:hover .card-img img { transform: scale(1.06); }
+    .card-img-placeholder { font-size: 2.5rem; color: #D0D0DA; }
+
+    .discount-badge {
+        position: absolute; top: 8px; left: 8px;
+        background: var(--pro-red); color: #fff;
+        font-size: 10.5px; font-weight: 700;
+        padding: 2px 8px; border-radius: 4px;
+    }
+
+    .card-body { padding: 10px 12px 12px; }
+    .card-cat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #9E9EAE; margin: 0 0 3px 0; }
+    .card-name {
+        font-size: 12.5px; font-weight: 600; color: #1A1A2E; margin: 0 0 7px 0;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; line-height: 1.4; min-height: 34px;
+    }
+    .card-price { display: flex; align-items: center; gap: 5px; }
+    .new-price { font-size: 13.5px; font-weight: 700; color: var(--pro-red); }
+    .old-price { font-size: 11.5px; color: #B0B0C0; text-decoration: line-through; }
+    .ask-price { font-size: 12px; color: #9E9EAE; }
+
+    .empty-state { text-align: center; padding: 80px 20px; color: #9E9EAE; }
+        .empty-state i { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+        .empty-state p { font-size: 15px; margin-bottom: 20px; }
+
+    .btn-back {
+        display: inline-block; padding: 10px 24px;
+        border: 1.5px solid var(--pro-red); border-radius: 6px;
+        color: var(--pro-red); text-decoration: none;
+        font-weight: 600; font-size: 13.5px; transition: all 0.2s;
+    }
+        .btn-back:hover { background: var(--pro-red); color: #fff; }
+
+    /* SAYFALAMA */
+    .promo-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 28px; }
+    .page-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 36px; height: 36px; padding: 0 8px;
+        border: 1px solid #E8E8EE; border-radius: 6px;
+        font-size: 13.5px; color: #4A4A5A; background: #fff;
+        text-decoration: none; transition: all 0.18s;
+    }
+        .page-btn:hover { border-color: var(--pro-red); color: var(--pro-red); }
+        .page-btn.active { background: var(--pro-red); border-color: var(--pro-red); color: #fff; font-weight: 700; }
+
+    /* RESPONSIVE */
+    @@media (max-width: 900px) {
+        .promo-layout { flex-direction: column; border-radius: 0; }
+        .promo-sidebar { width: 100%; min-width: 100%; border-right: none; border-bottom: 1px solid #E8E8EE; }
+        .category-list { max-height: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; overflow-y: visible; }
+        .sub-category-list { display: none; }
+        .category-item a { padding: 6px 14px; font-size: 12.5px; border-radius: 99px; border: 1px solid #E8E8EE; }
+        .cat-icon, .cat-chevron { display: none; }
+        .product-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+        .promo-content { padding: 12px; }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Kategori arama
+        document.getElementById('categorySearch').addEventListener('input', function () {
+            var filter = this.value.toLowerCase().trim();
+            document.querySelectorAll('.category-item').forEach(function (item) {
+                var text = item.querySelector('.cat-label')?.textContent.toLowerCase() ?? '';
+                item.style.display = (!filter || text.includes(filter)) ? '' : 'none';
+            });
+        });
+
+        // Alt kategori accordion (tıklama ile aç/kapat) — sadece masaüstünde
+        document.querySelectorAll('.category-item.has-children > a').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                if (window.innerWidth <= 900) return; // mobilde normal link gibi çalışsın
+
+                var li = link.closest('.category-item');
+                var subList = li.querySelector(':scope > .sub-category-list');
+                if (!subList) return;
+
+                // Zaten expanded ise navigation'a izin ver, değilse aç
+                if (!subList.classList.contains('expanded')) {
+                    e.preventDefault();
+                    subList.classList.add('expanded');
+                    li.classList.add('is-open');
+                }
+            });
+        });
+    </script>
+}

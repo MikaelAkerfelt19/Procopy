@@ -1,0 +1,307 @@
+@using Procopy.Models
+@model AdminSectionViewModel
+
+@{
+    ViewData["Title"] = Model.SectionName;
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    void RenderAdminCategory(Category node, int level)
+    {
+        var indent = level * 24;
+        var borderColor = level == 0 ? "#D6001C" : (level == 1 ? "#20c997" : "#adb5bd");
+        var bgColor = level == 0 ? "#fff3f3" : "#fff";
+
+        <div class="admin-cat-row" style="margin-left:@(indent)px; border-left: 3px solid @borderColor; background:@bgColor;">
+            <div class="d-flex align-items-center justify-content-between py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    @if (level == 0)
+                    {
+                        <i class="fas fa-folder-open text-danger"></i>
+                        <strong>@node.CategoryName</strong>
+                    }
+                    else if (level == 1)
+                    {
+                        <i class="fas fa-folder text-success" style="font-size:0.85em;"></i>
+                        <span class="fw-semibold">@node.CategoryName</span>
+                    }
+                    else
+                    {
+                        <i class="fas fa-circle text-secondary" style="font-size:0.5em;"></i>
+                        <span class="text-secondary">@node.CategoryName</span>
+                    }
+                    @if (!string.IsNullOrEmpty(node.ImportUrl))
+                    {
+                        <span class="badge bg-purple ms-1" style="background:#6f42c1; font-size:10px;">Bot</span>
+                    }
+                </div>
+                <div class="d-flex gap-1 flex-shrink-0">
+                    <a href="/Admin/Dashboard/ChangeOrder?id=@node.CategoryId&direction=up"
+                       class="btn btn-xs btn-outline-secondary" title="Yukarı"><i class="fas fa-arrow-up fa-xs"></i></a>
+                    <a href="/Admin/Dashboard/ChangeOrder?id=@node.CategoryId&direction=down"
+                       class="btn btn-xs btn-outline-secondary" title="Aşağı"><i class="fas fa-arrow-down fa-xs"></i></a>
+                    <a href="/Admin/Dashboard/CategoryCreate?parentId=@node.CategoryId"
+                       class="btn btn-xs btn-success">+ Alt Ekle</a>
+                    <a href="/Admin/Dashboard/CategoryEdit?id=@node.CategoryId"
+                       class="btn btn-xs btn-warning">Düzenle</a>
+                    @if (level > 0)
+                    {
+                        <a href="/Admin/Dashboard/DeleteCategory?id=@node.CategoryId"
+                           class="btn btn-xs btn-danger"
+                           onclick="return confirm('Silmek istediğine emin misin?')">Sil</a>
+                    }
+                    @if (!string.IsNullOrEmpty(node.ImportUrl))
+                    {
+                        <button onclick="botuBaslat(@node.CategoryId)" class="btn btn-xs text-white" style="background:#6f42c1;">
+                            <i class="fas fa-play-circle fa-xs me-1"></i>Bot
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (node.Children != null && node.Children.Any())
+        {
+            foreach (var child in node.Children.OrderBy(x => x.DisplayOrder))
+            {
+                RenderAdminCategory(child, level + 1);
+            }
+        }
+    }
+}
+
+<!-- İSTATİSTİK KARTLARI -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                    <i class="@Model.SectionIcon"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Bölüm</div>
+                    <div class="fw-bold fs-6">@Model.SectionName</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Kategori Sayısı</div>
+                    <div class="fw-bold fs-4">@Model.TotalCategories</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Toplam Ürün</div>
+                    <div class="fw-bold fs-4">@Model.TotalProducts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fas fa-link"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Hızlı Erişim</div>
+                    <a href="/Admin/Dashboard/CategoryCreate?parentId=@(Model.RootCategory?.CategoryId)"
+                       class="btn btn-sm btn-outline-danger mt-1">+ Kategori Ekle</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İKİ KOLONLU LAYOUT -->
+<div class="row g-4">
+
+    <!-- SOL: KATEGORİ AĞACI -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-sitemap text-danger me-2"></i>Kategori Ağacı
+                </h6>
+                <a href="/Admin/Dashboard/CategoryList" class="btn btn-sm btn-outline-secondary">
+                    Tüm Kategoriler
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if (TempData["Hata"] != null)
+                {
+                    <div class="alert alert-danger m-3">@TempData["Hata"]</div>
+                }
+
+                @if (Model.RootCategory != null)
+                {
+                    <div class="admin-cat-tree p-2">
+                        @{ RenderAdminCategory(Model.RootCategory, 0); }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-folder-open fa-2x mb-2"></i>
+                        <p class="small">Bu bölüm için henüz kategori tanımlanmamış.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- SAĞ: SON ÜRÜNLER -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-box-open text-primary me-2"></i>Son Eklenen Ürünler
+                    <span class="badge bg-secondary ms-2">@Model.RecentProducts.Count / @Model.TotalProducts</span>
+                </h6>
+                <div class="d-flex gap-2">
+                    <a href="/Admin/Dashboard/Create" class="btn btn-sm btn-danger">
+                        <i class="fas fa-plus me-1"></i>Yeni Ürün
+                    </a>
+                    <a href="/Admin/Dashboard/Products" class="btn btn-sm btn-outline-secondary">
+                        Tümünü Gör
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RecentProducts.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:50px;"></th>
+                                    <th>Ürün Adı</th>
+                                    <th>Kategori</th>
+                                    <th>Fiyat</th>
+                                    <th style="width:80px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.RecentProducts)
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(p.MainImageUrl))
+                                            {
+                                                <img src="@p.MainImageUrl" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;">
+                                            }
+                                            else
+                                            {
+                                                <div style="width:36px;height:36px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-image text-muted fa-xs"></i>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold" style="font-size:0.82rem;">@p.ProductName</span>
+                                            <br><small class="text-muted">@p.ProductCode</small>
+                                        </td>
+                                        <td><small class="text-muted">@p.Category?.CategoryName</small></td>
+                                        <td>
+                                            @if (p.Price.HasValue && p.Price.Value > 0)
+                                            {
+                                                <span class="text-danger fw-semibold" style="font-size:0.82rem;">@p.Price.Value.ToString("C2")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">—</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a href="/Admin/Dashboard/Edit/@p.ProductId" class="btn btn-xs btn-outline-warning">Düzenle</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-box-open fa-2x mb-2"></i>
+                        <p class="small">Henüz bu bölümde ürün yok.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bot Modal -->
+<div class="modal fade" id="botSonucModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-robot me-2"></i>Bot İşlem Raporu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="botModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-danger"></div>
+                    <p class="mt-3 text-muted">Veriler taranıyor...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <a href="/Admin/Dashboard/Products" class="btn btn-success">Ürünlere Git</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-icon {
+        width: 46px; height: 46px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem; flex-shrink: 0;
+    }
+
+    .admin-cat-row {
+        margin-bottom: 3px; border-radius: 6px;
+        transition: background 0.15s;
+    }
+        .admin-cat-row:hover { filter: brightness(0.97); }
+
+    .btn-xs {
+        padding: 2px 8px; font-size: 11px; line-height: 1.5;
+        border-radius: 4px; border-width: 1px;
+    }
+
+    .admin-cat-tree { max-height: 520px; overflow-y: auto; }
+        .admin-cat-tree::-webkit-scrollbar { width: 4px; }
+        .admin-cat-tree::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 4px; }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function botuBaslat(id) {
+        var myModal = new bootstrap.Modal(document.getElementById('botSonucModal'));
+        myModal.show();
+        $('#botModalBody').html('<div class="text-center py-4"><div class="spinner-border text-danger"></div><p class="mt-3">Bot Çalışıyor...</p></div>');
+        $.ajax({
+            url: '/DataImport/StartTreeImport?mainCategoryId=' + id,
+            type: 'GET',
+            success: function (r) { $('#botModalBody').html(r); },
+            error: function () { $('#botModalBody').html('<div class="alert alert-danger">Hata oluştu!</div>'); }
+        });
+    }
+</script>

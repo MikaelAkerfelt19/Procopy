@@ -1,0 +1,618 @@
+@model Procopy.Models.PrintCalculatorViewModel
+@{
+    ViewData["Title"] = Model.ProductType.Name + " - Fiyat Hesapla";
+}
+
+<style>
+    /* ===== GENEL ===== */
+    body { background-color: #f0f0f0; }
+
+    .calc-wrapper {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
+
+    /* ===== BREADCRUMB ===== */
+    .calc-breadcrumb {
+        font-size: 0.85rem;
+        color: #888;
+        margin-bottom: 20px;
+    }
+    .calc-breadcrumb a { color: #D6001C; text-decoration: none; }
+    .calc-breadcrumb a:hover { text-decoration: underline; }
+
+    /* ===== ANA LAYOUT ===== */
+    .calc-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 20px;
+        align-items: start;
+    }
+    @@media (max-width: 900px) {
+        .calc-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ===== SOL PANEL (Seçimler) ===== */
+    .panel {
+        background: #fff;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .panel-title {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 700;
+        font-size: 1.4rem;
+        color: #1A1A1A;
+        margin-bottom: 6px;
+    }
+    .panel-subtitle {
+        font-size: 0.88rem;
+        color: #999;
+        margin-bottom: 24px;
+    }
+
+    /* ===== PARAMETRE GRUBU ===== */
+    .param-group {
+        margin-bottom: 24px;
+    }
+    .param-label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .param-label .required-dot {
+        width: 6px; height: 6px;
+        background: #D6001C;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    /* ===== CHIP SEÇİMİ (radio button görünümlü) ===== */
+    .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .chip-group input[type=radio],
+    .chip-group input[type=checkbox] { display: none; }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.18s ease;
+        background: #fafafa;
+        color: #444;
+        user-select: none;
+    }
+    .chip:hover { border-color: #D6001C; color: #D6001C; background: #fff5f5; }
+
+    input[type=radio]:checked + .chip,
+    input[type=checkbox]:checked + .chip {
+        background: #D6001C;
+        border-color: #D6001C;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(214,0,28,0.3);
+    }
+
+    /* ===== BOYUT KARTCIKlari ===== */
+    .size-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    .size-group input[type=radio] { display: none; }
+    .size-card {
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 12px 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.18s;
+        background: #fafafa;
+    }
+    .size-card:hover { border-color: #D6001C; }
+    .size-card .size-name { font-weight: 600; font-size: 0.9rem; color: #333; }
+    .size-card .size-dim { font-size: 0.75rem; color: #999; margin-top: 2px; }
+    input[type=radio]:checked + .size-card {
+        background: #D6001C;
+        border-color: #D6001C;
+    }
+    input[type=radio]:checked + .size-card .size-name,
+    input[type=radio]:checked + .size-card .size-dim {
+        color: #fff;
+    }
+
+    /* ===== ADET SEÇİCİ ===== */
+    .qty-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .qty-group input[type=radio] { display: none; }
+    .qty-chip {
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s;
+        background: #fafafa;
+        color: #333;
+        text-align: center;
+        min-width: 80px;
+    }
+    .qty-chip:hover { border-color: #D6001C; color: #D6001C; }
+    input[type=radio]:checked + .qty-chip {
+        background: #1A1A1A;
+        border-color: #1A1A1A;
+        color: #fff;
+    }
+
+    /* ===== DROPDOWN PARAMETRE ===== */
+    .param-select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        color: #333;
+        background: #fafafa;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        cursor: pointer;
+        transition: border-color 0.18s;
+    }
+    .param-select:focus {
+        outline: none;
+        border-color: #D6001C;
+    }
+
+    /* ===== SAĞ PANEL (Özet + Fiyat) ===== */
+    .summary-panel {
+        position: sticky;
+        top: 20px;
+    }
+    .price-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        margin-bottom: 16px;
+    }
+    .price-card .product-title {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1A1A1A;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .selection-list {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 16px;
+    }
+    .selection-list li {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        padding: 6px 0;
+        border-bottom: 1px dashed #f0f0f0;
+        color: #555;
+    }
+    .selection-list li .sel-key { color: #999; }
+    .selection-list li .sel-val { font-weight: 500; color: #333; }
+
+    .price-display {
+        background: linear-gradient(135deg, #1A1A1A, #D6001C);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+        margin-top: 16px;
+    }
+    .price-display .price-label { font-size: 0.8rem; opacity: 0.8; margin-bottom: 4px; }
+    .price-display .price-total {
+        font-family: 'Poppins', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .price-display .price-unit {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        margin-top: 4px;
+    }
+    .price-display.incomplete {
+        background: #e0e0e0;
+        color: #999;
+    }
+
+    .btn-teklif {
+        background: #D6001C;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 1rem;
+        font-weight: 700;
+        width: 100%;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.1s;
+        margin-top: 12px;
+    }
+    .btn-teklif:hover { background: #b50018; transform: translateY(-1px); }
+    .btn-teklif:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+    .btn-wa {
+        background: #25D366;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        width: 100%;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    .btn-wa:hover { background: #1da851; }
+
+    /* Separator */
+    .divider {
+        height: 1px;
+        background: #f0f0f0;
+        margin: 24px 0;
+    }
+</style>
+
+<div class="calc-wrapper">
+    <!-- Breadcrumb -->
+    <div class="calc-breadcrumb">
+        <a href="@Url.Action("Index", "Matbaa")"><i class="fas fa-print me-1"></i>Matbaa</a>
+        <span class="mx-2">/</span>
+        <span>@Model.ProductType.Name</span>
+    </div>
+
+    <div class="calc-layout">
+        <!-- ========== SOL: SEÇİM PANELİ ========== -->
+        <div>
+            <div class="panel">
+                <div class="panel-title"><i class="fas fa-sliders-h me-2 text-danger"></i>@Model.ProductType.Name</div>
+                <div class="panel-subtitle">Aşağıdan özelliklerinizi seçin, fiyatı anında görün.</div>
+
+                <!-- BOYUT SEÇİMİ (eğer boyutlar varsa) -->
+                @if (Model.Sizes.Any())
+                {
+                    <div class="param-group">
+                        <div class="param-label">
+                            <span class="required-dot"></span> Boyut
+                        </div>
+                        <div class="size-group">
+                            @foreach (var size in Model.Sizes)
+                            {
+                                <label>
+                                    <input type="radio" name="size" value="@size.SizeId"
+                                           data-area="@size.SheetAreaM2"
+                                           data-width="@size.WidthMM"
+                                           data-height="@size.HeightMM"
+                                           class="calc-input" />
+                                    <div class="size-card">
+                                        <div class="size-name">@size.Name</div>
+                                        @if (size.WidthMM.HasValue && size.HeightMM.HasValue)
+                                        {
+                                            <div class="size-dim">@((int)size.WidthMM)×@((int)size.HeightMM) mm</div>
+                                        }
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                }
+
+                <!-- DİNAMİK PARAMETRELER -->
+                @foreach (var param in Model.Parameters)
+                {
+                    <div class="param-group" data-param-id="@param.ParameterId"
+                         @(param.DependsOnParameterId.HasValue ? $"data-depends-on={param.DependsOnParameterId}" : "")
+                         style="@(param.DependsOnParameterId.HasValue ? "display:none" : "")">
+
+                        <div class="param-label">
+                            @if (param.IsRequired) { <span class="required-dot"></span> }
+                            @param.Name
+                            @if (!string.IsNullOrEmpty(param.HelpText))
+                            {
+                                <i class="fas fa-question-circle text-muted ms-1"
+                                   data-bs-toggle="tooltip" title="@param.HelpText" style="font-size:0.8rem"></i>
+                            }
+                        </div>
+
+                        @if (param.FieldType == "select" || param.FieldType == "dropdown")
+                        {
+                            <select name="param_@param.FieldKey" class="param-select calc-input"
+                                    data-field-key="@param.FieldKey" data-param-id="@param.ParameterId">
+                                <option value="">-- Seçiniz --</option>
+                                @foreach (var val in param.Values.OrderBy(v => v.DisplayOrder))
+                                {
+                                    <option value="@val.Value"
+                                            data-label="@val.Label"
+                                            data-parent-value-id="@val.ParentValueId"
+                                            @@(val.IsDefault ? "selected" : "")>
+                                        @val.Label
+                                    </option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <div class="chip-group">
+                                @foreach (var val in param.Values.OrderBy(v => v.DisplayOrder))
+                                {
+                                    var inputId = $"param_{param.FieldKey}_{val.ValueId}";
+                                    <label for="@inputId">
+                                        <input type="radio" id="@inputId"
+                                               name="param_@param.FieldKey"
+                                               value="@val.Value"
+                                               data-label="@val.Label"
+                                               data-parent-value-id="@val.ParentValueId"
+                                               data-field-key="@param.FieldKey"
+                                               data-param-id="@param.ParameterId"
+                                               class="calc-input"
+                                               @(val.IsDefault ? "checked" : "") />
+                                        <span class="chip">@val.Label</span>
+                                    </label>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="divider"></div>
+                }
+
+                <!-- ADET SEÇİMİ -->
+                @if (Model.Quantities.Any())
+                {
+                    <div class="param-group">
+                        <div class="param-label">
+                            <span class="required-dot"></span> Adet
+                        </div>
+                        <div class="qty-group">
+                            @foreach (var qty in Model.Quantities)
+                            {
+                                <label>
+                                    <input type="radio" name="quantity" value="@qty.Quantity" class="calc-input" />
+                                    <div class="qty-chip">
+                                        @qty.Quantity.ToString("N0") adet
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ========== SAĞ: ÖZET & FİYAT ========== -->
+        <div class="summary-panel">
+            <div class="price-card">
+                <div class="product-title">
+                    <i class="fas fa-receipt me-2 text-danger"></i>@Model.ProductType.Name
+                </div>
+
+                <!-- Seçimler Özeti -->
+                <ul class="selection-list" id="selectionSummary">
+                    <li id="no-selection-msg">
+                        <span class="sel-key">Henüz seçim yapılmadı.</span>
+                    </li>
+                </ul>
+
+                <!-- Fiyat Kutusu -->
+                <div class="price-display incomplete" id="priceBox">
+                    <div class="price-label">Tahmini Fiyat</div>
+                    <div class="price-total" id="priceTotal">— ₺</div>
+                    <div class="price-unit" id="priceUnit">Seçimleri tamamlayın</div>
+                </div>
+
+                <button class="btn-teklif" id="btnTeklif" disabled>
+                    <i class="fas fa-paper-plane me-2"></i>Teklif Al
+                </button>
+
+                <button class="btn-wa" id="btnWa">
+                    <i class="fab fa-whatsapp fa-lg"></i>
+                    WhatsApp ile Sor
+                </button>
+            </div>
+
+            <div class="price-card" style="font-size:0.82rem; color:#777;">
+                <i class="fas fa-info-circle text-danger me-1"></i>
+                Gösterilen fiyatlar tahmini olup KDV hariçtir. Kesin fiyat için teklif alın.
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    // Bootstrap tooltip
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+
+    const productTypeName = '@Html.Raw(Model.ProductType.Name)';
+    const productTypeSlug = '@Model.ProductType.Slug';
+    const waPhone = '905321234567'; // TODO: config'den çek
+
+    // ===== Tüm seçim değerlerini tutan nesne =====
+    const selections = {};
+
+    // ===== UI elementleri =====
+    const summaryList = document.getElementById('selectionSummary');
+    const noSelMsg = document.getElementById('no-selection-msg');
+    const priceBox = document.getElementById('priceBox');
+    const priceTotal = document.getElementById('priceTotal');
+    const priceUnit = document.getElementById('priceUnit');
+    const btnTeklif = document.getElementById('btnTeklif');
+    const btnWa = document.getElementById('btnWa');
+
+    // ===== Tüm hesap inputlarını izle =====
+    document.querySelectorAll('.calc-input').forEach(input => {
+        input.addEventListener('change', onInputChange);
+    });
+    document.querySelectorAll('.param-select').forEach(sel => {
+        sel.addEventListener('change', onInputChange);
+    });
+
+    function onInputChange(e) {
+        const el = e.target;
+        const name = el.name;
+
+        if (el.tagName === 'SELECT') {
+            const opt = el.options[el.selectedIndex];
+            if (el.value) {
+                selections[name] = { value: el.value, label: opt.dataset.label || opt.text };
+            } else {
+                delete selections[name];
+            }
+        } else if (el.type === 'radio' || el.type === 'checkbox') {
+            if (el.checked) {
+                const label = el.dataset.label || el.value;
+                selections[name] = { value: el.value, label: label };
+            }
+        }
+
+        // Bağımlı parametreleri göster/gizle
+        handleDependencies();
+
+        updateSummary();
+        requestPrice();
+    }
+
+    function handleDependencies() {
+        document.querySelectorAll('[data-depends-on]').forEach(group => {
+            const dependsOn = parseInt(group.dataset.dependsOn);
+            // Bağımlı olduğu parametrenin mevcut değerini bul
+            // (parent parametre seçilmişse göster)
+            const parentParam = document.querySelector(`[data-param-id="${dependsOn}"]`);
+            if (!parentParam) return;
+
+            // Parent input seçili mi?
+            const parentInput = parentParam.querySelector('input:checked, select');
+            const hasValue = parentInput && (
+                (parentInput.tagName === 'SELECT' && parentInput.value) ||
+                (parentInput.tagName === 'INPUT' && parentInput.checked)
+            );
+
+            group.style.display = hasValue ? '' : 'none';
+            group.querySelector('.divider');
+        });
+    }
+
+    function updateSummary() {
+        summaryList.innerHTML = '';
+        const keys = Object.keys(selections);
+
+        if (keys.length === 0) {
+            summaryList.innerHTML = '<li id="no-selection-msg"><span class="sel-key">Henüz seçim yapılmadı.</span></li>';
+            return;
+        }
+
+        keys.forEach(key => {
+            const s = selections[key];
+            const li = document.createElement('li');
+            const displayKey = key.replace('param_', '').replace('_', ' ');
+            li.innerHTML = `<span class="sel-key">${capitalize(displayKey)}</span><span class="sel-val">${s.label}</span>`;
+            summaryList.appendChild(li);
+        });
+    }
+
+    function requestPrice() {
+        const hasSize = !!selections['size'];
+        const hasQty = !!selections['quantity'];
+
+        if (!hasSize && @(Model.Sizes.Any() ? "true" : "false")) {
+            showIncomplete('Boyut seçin');
+            return;
+        }
+        if (!hasQty && @(Model.Quantities.Any() ? "true" : "false")) {
+            showIncomplete('Adet seçin');
+            return;
+        }
+
+        // Fiyat API çağrısı (sonraki adımda implement edilecek)
+        // Şimdilik mock gösterim
+        showPrice(null, null);
+    }
+
+    function showIncomplete(msg) {
+        priceBox.className = 'price-display incomplete';
+        priceTotal.textContent = '— ₺';
+        priceUnit.textContent = msg;
+        btnTeklif.disabled = true;
+    }
+
+    function showPrice(total, unitPrice) {
+        // TODO: gerçek API'den fiyat alınacak
+        priceBox.className = 'price-display';
+        priceTotal.textContent = 'Fiyat Sorun';
+        priceUnit.textContent = 'Seçimlerinize göre teklif alın';
+        btnTeklif.disabled = false;
+    }
+
+    function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // ===== WhatsApp Butonu =====
+    btnWa.addEventListener('click', function () {
+        let msg = `Merhaba, ${productTypeName} için fiyat almak istiyorum.\n\nSeçimlerim:\n`;
+        Object.keys(selections).forEach(k => {
+            const key = k.replace('param_', '').replace(/_/g, ' ');
+            msg += `- ${capitalize(key)}: ${selections[k].label}\n`;
+        });
+        msg += `\nWeb: ${window.location.href}`;
+        const encoded = encodeURIComponent(msg);
+        window.open(`https://wa.me/${waPhone}?text=${encoded}`, '_blank');
+    });
+
+    // ===== Teklif Al Butonu =====
+    btnTeklif.addEventListener('click', function () {
+        // TODO: teklif formu modal açılacak
+        alert('Teklif formu yakında aktif olacak!');
+    });
+
+    // Sayfa açılışında varsayılan seçili olanları işle
+    document.querySelectorAll('.calc-input:checked').forEach(el => {
+        el.dispatchEvent(new Event('change'));
+    });
+    document.querySelectorAll('.param-select').forEach(sel => {
+        if (sel.value) sel.dispatchEvent(new Event('change'));
+    });
+
+})();
+</script>
+}

@@ -42,44 +42,23 @@ namespace Procopy.Jobs
             {
                 run.Status = "failed";
                 run.Errors += 1;
-
-                // Hata detayını her iki yere de yaz
-                Console.WriteLine($"KRITIK HATA: {ex}");
-                try
-                {
-                    await Log(runId, "error", run.StartUrl, "Kritik Hata", ex.ToString());
-                }
-                catch
-                {
-                    // log bile yazılamıyorsa sessiz geç
-                }
+                await Log(runId, "error", null, "Kritik Hata", ex.ToString());
             }
             finally
             {
                 run.EndAt = DateTime.Now;
                 run.PagesVisited = visitedUrls.Count;
-
-                try { await _context.SaveChangesAsync(); } catch { }
-                try { await Log(runId, "info", null, "Bitti", $"Status={run.Status}, Pages={run.PagesVisited}, Added={run.ProductsAdded}, Skipped={run.ProductsSkipped}, Errors={run.Errors}"); } catch { }
+                await _context.SaveChangesAsync();
+                await Log(runId, "info", null, "Bitti", $"Status={run.Status}, Pages={run.PagesVisited}, Added={run.ProductsAdded}, Skipped={run.ProductsSkipped}, Errors={run.Errors}");
             }
         }
 
-        // ✅ DÜZELTME 2: Cloudflare bypass eklendi
         private HtmlWeb CreateHtmlWeb()
         {
-            System.Net.ServicePointManager.SecurityProtocol =
-                System.Net.SecurityProtocolType.Tls12 |
-                System.Net.SecurityProtocolType.Tls13;
-
-            System.Net.ServicePointManager.ServerCertificateValidationCallback =
-                (sender, cert, chain, errors) => true;
-
-            var web = new HtmlWeb();
-            web.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
-            // ❌ PreRequest kaldırıldı — Accept-Encoding gzip HtmlAgilityPack'i bozuyor
-
-            return web;
+            return new HtmlWeb
+            {
+                UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            };
         }
 
         private static string NormalizeUrl(string url)
@@ -125,15 +104,23 @@ namespace Procopy.Jobs
                 return;
             }
 
-            // ✅ DÜZELTME 3: Eski WooCommerce seçicileri kaldırıldı
-            // Yeni Tailwind tasarımında alt kategori yapısı yok, direkt ürün listesi var
-            var categoryGridNodes = (HtmlNodeCollection)null;
-            var subCats = (HtmlNodeCollection)null;
+            var categoryGridNodes = doc.DocumentNode.SelectNodes("//ul[contains(@class,'products')]//li[contains(@class,'product-category')]//a");
 
-            // Ürün listesi var mı kontrol et
-            var hasProductList = doc.DocumentNode.SelectNodes(
-                "//div[contains(@class,'group') and contains(@class,'bg-white') and contains(@class,'rounded-2xl')]"
-            );
+            var subCats =
+                categoryGridNodes
+                ?? doc.DocumentNode.SelectNodes("//li[contains(@class,'product-category')]//a")
+                ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'category')]//a")
+                ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'sub-menu')]//a");
+
+            // CrawlRecursive metodu içindeki hasProductList tanımını şu şekilde değiştir:
+
+            var hasProductList =
+                doc.DocumentNode.SelectNodes("//div[contains(@class,'product-block')]") // YENİ EKLENEN SATIR
+                ?? doc.DocumentNode.SelectNodes("//ul[contains(@class,'products')]//li[contains(@class,'product')]//a[contains(@class,'woocommerce-LoopProduct-link')]")
+                ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'product')]//a[contains(@class,'woocommerce-LoopProduct-link')]")
+                ?? doc.DocumentNode.SelectNodes("//div[@class='image']/a")
+                ?? doc.DocumentNode.SelectNodes("//h3/a")
+                ?? doc.DocumentNode.SelectNodes("//h4/a");
 
             bool hasProducts = hasProductList != null && hasProductList.Count > 0;
 
@@ -185,10 +172,8 @@ namespace Procopy.Jobs
         {
             baseUrl = NormalizeUrl(baseUrl);
 
-            // Yeni Tailwind tasarımı ürün kartları
-            var productBlocks = doc.DocumentNode.SelectNodes(
-                "//div[contains(@class,'group') and contains(@class,'bg-white') and contains(@class,'rounded-2xl')]"
-            );
+            // 1. Ürün bloklarını bul
+            var productBlocks = doc.DocumentNode.SelectNodes("//div[contains(@class,'product-block')]");
 
             if (productBlocks == null || productBlocks.Count == 0)
             {
@@ -196,44 +181,51 @@ namespace Procopy.Jobs
                 return;
             }
 
+        
             var productsToProcess = new List<(string Link, string ImageUrl, string Code, string RawPrice)>();
 
             foreach (var block in productBlocks)
             {
-                var linkNode = block.SelectSingleNode(".//a[@href]");
-                var imgNode = block.SelectSingleNode(".//img");
+                var linkNode = block.SelectSingleNode(".//div[@class='image']/a");
+                var imgNode = block.SelectSingleNode(".//div[@class='image']//img");
 
-                // "Kod: 5010SYH" formatındaki span
+                // "Ürün Kodu :" yazan small'dan sonraki a > span'ı hedef al
                 var codeNode = block.SelectSingleNode(
-                    ".//span[contains(@class,'text-gray-400') and contains(text(),'Kod:')]"
+                    ".//small[contains(text(),'Ürün Kodu')]/following-sibling::a[1]/span"
                 );
 
-                // "7.60 TL" formatındaki fiyat span
+                // Yukarıdaki çalışmazsa fallback
+                if (codeNode == null)
+                    codeNode = block.SelectSingleNode(
+                        ".//span[contains(@class,'special-price') and contains(@class,'kalin')]"
+                    );
                 var priceNode = block.SelectSingleNode(
-                     ".//span[contains(@class,'text-base') and contains(@class,'font-bold') and contains(@class,'text-primary')]"
-                );
+      ".//div[contains(@class,'price-gruop')]"
+  );
 
+                string rawPrice = WebUtility.HtmlDecode(
+                    priceNode?.InnerText ?? ""
+                ).Replace("TL", "").Replace("₺", "").Trim();
                 string href = linkNode?.GetAttributeValue("href", "")?.Trim();
                 string imgSrc = imgNode?.GetAttributeValue("src", "")?.Trim();
 
-                // "Kod: 5010SYH" → "5010SYH"
-                string rawCode = codeNode?.InnerText?.Trim();
-                string productCode = null;
-                if (!string.IsNullOrWhiteSpace(rawCode))
-                {
-                    productCode = Regex.Replace(rawCode, @"^Kod:\s*", "", RegexOptions.IgnoreCase).Trim();
-                }
+                string productCode = codeNode?.InnerText?.Trim();
 
-                string rawPrice = priceNode?.InnerText
-                    ?.Replace("TL", "").Replace("₺", "").Trim();
+                // Boşluk, &nbsp; ve HTML entity temizliği
+                if (!string.IsNullOrWhiteSpace(productCode))
+                {
+                    productCode = WebUtility.HtmlDecode(productCode).Trim();
+                    productCode = Regex.Replace(productCode, @"\s+", ""); // tüm boşlukları sil
+                }
 
                 if (!string.IsNullOrWhiteSpace(href))
                 {
                     productsToProcess.Add((href, imgSrc, productCode, rawPrice));
                 }
+
             }
 
-            // Tekrar edenleri temizle
+            // Aynı linkleri temizle
             productsToProcess = productsToProcess
                 .Where(x => x.Link.Length > 5)
                 .GroupBy(x => x.Link, StringComparer.OrdinalIgnoreCase)
@@ -242,12 +234,16 @@ namespace Procopy.Jobs
 
             await Log(runId, "info", baseUrl, "Ürün listesi", $"Count={productsToProcess.Count}, CatId={catId}");
 
-            int added = 0, skipped = 0;
+            int added = 0;
+            int skipped = 0;
 
             foreach (var item in productsToProcess)
             {
                 var fullUrl = NormalizeUrl(BuildAbsoluteUrl(baseUrl, item.Link));
+
+                // 4 elemanı da ProcessProduct'a başarıyla gönderiyoruz
                 var result = await ProcessProduct(fullUrl, item.ImageUrl, item.Code, item.RawPrice, catId, runId);
+
                 if (result.Status == "ok") added++;
                 else skipped++;
             }
@@ -259,11 +255,10 @@ namespace Procopy.Jobs
 
             await Log(runId, "info", baseUrl, "Sayfa sonucu", $"Added={added}, Skipped={skipped}");
 
-            // Pagination
-            var nextPageNode =
-                doc.DocumentNode.SelectSingleNode("//a[contains(@class,'next') and contains(@class,'page-numbers')]")
-                ?? doc.DocumentNode.SelectSingleNode("//a[@rel='next']")
-                ?? doc.DocumentNode.SelectSingleNode("//link[@rel='next']");
+            // Pagination kısmı aynen kalıyor
+            var nextPageNode = doc.DocumentNode.SelectSingleNode("//a[contains(@class,'next') and contains(@class,'page-numbers')]")
+                               ?? doc.DocumentNode.SelectSingleNode("//a[@rel='next']")
+                               ?? doc.DocumentNode.SelectSingleNode("//link[@rel='next']");
 
             if (nextPageNode != null)
             {
@@ -291,8 +286,9 @@ namespace Procopy.Jobs
             }
         }
 
-        private async Task<(string Status, string Message)> ProcessProduct(
-            string url, string listImageUrl, string productCode, string rawPrice, int catId, int runId)
+        // DİKKAT: Metot imzasına listImageUrl eklendi
+        // DİKKAT: Parametre sayısı 6'ya çıkarıldı!
+        private async Task<(string Status, string Message)> ProcessProduct(string url, string listImageUrl, string productCode, string rawPrice, int catId, int runId)
         {
             try
             {
@@ -305,12 +301,14 @@ namespace Procopy.Jobs
                 var h1 = root.SelectSingleNode("//h1");
                 string name = WebUtility.HtmlDecode(h1?.InnerText?.Trim() ?? "İsimsiz Ürün");
 
-                // Fiyatı önce listeden gelen metinden ayrıştır
+                // 1. Fiyatı listeden gelen metinden ayrıştır (ParsePriceFromText metodunu eklediğinden emin ol)
                 decimal price = ParsePriceFromText(rawPrice);
 
-                // Listeden gelemediyse detay sayfasından çek
+                // Eğer listeden fiyat gelmediyse (teklif iste vb.), detay sayfasında aramaya çalış
                 if (price <= 0)
+                {
                     price = ExtractPriceValues(root);
+                }
 
                 if (price <= 0)
                 {
@@ -319,8 +317,12 @@ namespace Procopy.Jobs
                 }
 
                 string imgPath = null;
+
+                // 2. Resmi doğrudan kategori sayfasından gelen URL'den indir
                 if (!string.IsNullOrWhiteSpace(listImageUrl))
+                {
                     imgPath = await DownloadImage(listImageUrl, name, url);
+                }
 
                 var product = await _context.Products.FirstOrDefaultAsync(p => p.SourceUrl == url);
                 bool isNew = product == null;
@@ -343,45 +345,28 @@ namespace Procopy.Jobs
                 if (!string.IsNullOrWhiteSpace(imgPath))
                     product.MainImageUrl = imgPath;
 
-                // Ürün kodu
+                // 3. Ürün Kodunu Kaydet (Listeden gelen 5010SYH gibi kodu yaz)
                 if (!string.IsNullOrWhiteSpace(productCode))
                     product.ProductCode = productCode;
                 else
                     product.ProductCode = $"PR-{_rng.Next(10000, 99999)}";
 
-                // Slug
+                // 4. SEO ve Link Yapısı (plastik-kalem-5010syh şeklinde oluştur)
                 if (string.IsNullOrWhiteSpace(product.Slug) || isNew)
+                {
                     product.Slug = GenerateSlug(name) + "-" + product.ProductCode.ToLowerInvariant();
+                }
 
                 await _context.SaveChangesAsync();
 
-                // ProductCategories kaydını ekle/güncelle (public filtreler için zorunlu)
-                var pcMevcut = await _context.ProductCategories
-                    .FirstOrDefaultAsync(pc => pc.ProductId == product.ProductId && pc.CategoryId == catId);
-
-                if (pcMevcut == null)
-                {
-                    _context.ProductCategories.Add(new ProductCategory
-                    {
-                        ProductId = product.ProductId,
-                        CategoryId = catId,
-                        IsMainCategory = true
-                    });
-                    await _context.SaveChangesAsync();
-                }
-
-                // Özellikleri çek
+                // 5. Özellikleri detay sayfasından (tablodan) çek
                 await ExtractFeatures(root, product.ProductId);
 
-                // ✅ DÜZELTME 1: Log satırları return'den ÖNCE
-                await Log(runId, "debug", url, "Kod Debug",
-                    $"RawCode='{productCode}' | RawPrice='{rawPrice}'");
-
-                await Log(runId, "info", url,
-                    isNew ? "Ürün eklendi" : "Ürün güncellendi",
-                    $"{name} | {price:0.00} TL | KOD: {product.ProductCode}");
+                await Log(runId, "info", url, isNew ? "Ürün eklendi" : "Ürün güncellendi", $"{name} | {price.ToString("0.00")} TL | KOD: {product.ProductCode}");
 
                 return ("ok", "saved");
+                await Log(runId, "debug", url, "Kod Debug",
+    $"RawCode='{productCode}' | RawPrice='{rawPrice}'");
             }
             catch (Exception ex)
             {
@@ -392,7 +377,6 @@ namespace Procopy.Jobs
                 return ("error", ex.Message);
             }
         }
-
         private decimal ParsePriceFromText(string rawText)
         {
             if (string.IsNullOrWhiteSpace(rawText)) return 0;
@@ -418,17 +402,18 @@ namespace Procopy.Jobs
 
                 if (decimal.TryParse(clean, NumberStyles.Any, CultureInfo.InvariantCulture, out var current))
                 {
-                    if (current > 0) { best = current; break; }
+                    if (current > 0)
+                    {
+                        best = current;
+                        break;
+                    }
                 }
             }
             return best;
         }
-
         private decimal ExtractPriceValues(HtmlNode root)
         {
-            var nodes = root.SelectNodes(
-                "//p[@class='price'] | //span[@class='price'] | //span[@class='amount'] | //div[contains(@class,'price')]"
-            );
+            var nodes = root.SelectNodes("//p[@class='price'] | //span[@class='price'] | //span[@class='amount'] | //div[contains(@class,'price')]");
             string rawText = "";
 
             if (nodes != null)
@@ -440,11 +425,14 @@ namespace Procopy.Jobs
             {
                 var textNodes = root.SelectNodes("//*[contains(text(),'TL')] | //*[contains(text(),'₺')]");
                 if (textNodes != null)
+                {
                     foreach (var t in textNodes)
                         rawText += " " + WebUtility.HtmlDecode(t.InnerText);
+                }
             }
 
-            if (string.IsNullOrWhiteSpace(rawText)) return 0;
+            if (string.IsNullOrWhiteSpace(rawText))
+                return 0;
 
             var lower = rawText.ToLowerInvariant();
             if (lower.Contains("fiyat sor") || lower.Contains("teklif") || lower.Contains("sorunuz"))
@@ -479,6 +467,7 @@ namespace Procopy.Jobs
                     }
                 }
             }
+
             return best;
         }
 
@@ -573,6 +562,7 @@ namespace Procopy.Jobs
 
         private async Task<string> DownloadImage(string url, string name, string productPageUrl)
         {
+            // 1. URL boşsa hiç işleme başlama
             if (string.IsNullOrWhiteSpace(url)) return null;
 
             try
@@ -582,25 +572,30 @@ namespace Procopy.Jobs
                     url = BuildAbsoluteUrl(productPageUrl, url);
 
                 var client = _httpClientFactory.CreateClient();
+
+                // 2. Tarayıcıyı taklit eden güçlü Header'lar (Bot korumasını aşmak için)
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
                 client.DefaultRequestHeaders.Add("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
                 client.DefaultRequestHeaders.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7");
-                client.DefaultRequestHeaders.Add("Referer", productPageUrl);
+                client.DefaultRequestHeaders.Add("Referer", productPageUrl); // Hotlink koruması için kritik!
 
+                // 3. GetByteArrayAsync yerine GetAsync kullanıp yanıtı kontrol edelim
                 var response = await client.GetAsync(url);
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    // Eğer resim indirilemezse sessizce kalmasın, konsola veya debug'a düşsün
                     Console.WriteLine($"Resim İndirilemedi! Status: {response.StatusCode} - URL: {url}");
                     return null;
                 }
 
                 var bytes = await response.Content.ReadAsByteArrayAsync();
 
+                // 4. Uzantı yakalama mantığını geliştirme
                 string ext = Path.GetExtension(url.Split('?')[0]);
                 if (string.IsNullOrWhiteSpace(ext) || ext.Length > 5)
-                    ext = ".jpg";
+                    ext = ".jpg"; // Varsayılan uzantı
 
                 string fileName = $"{GenerateSlug(name)}-{Guid.NewGuid().ToString("N")[..6]}{ext}";
                 string folder = Path.Combine(_env.WebRootPath, "images", "products");
@@ -615,6 +610,7 @@ namespace Procopy.Jobs
             }
             catch (Exception ex)
             {
+                // Hatayı yutmak yerine en azından konsola basalım
                 Console.WriteLine($"Resim İndirme Hatası: {ex.Message} - URL: {url}");
                 return null;
             }
@@ -625,8 +621,7 @@ namespace Procopy.Jobs
             name = (name ?? "").Trim();
             url = NormalizeUrl(url);
 
-            var cat = await _context.Categories
-                .FirstOrDefaultAsync(c => c.CategoryName == name && c.ParentId == parentId);
+            var cat = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryName == name && c.ParentId == parentId);
 
             if (cat == null)
             {
@@ -676,6 +671,7 @@ namespace Procopy.Jobs
                 Title = title,
                 Message = message
             });
+
             await _context.SaveChangesAsync();
         }
     }

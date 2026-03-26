@@ -1,0 +1,160 @@
+@using Procopy.Models
+@model List<Category>
+
+@{
+    ViewData["Title"] = "Veri İndir";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary">
+            <i class="fas fa-cloud-download-alt me-2"></i>Kategori Ürünlerini İndir
+        </h6>
+        <small class="text-muted">Bot ile sadece 4 ana kategoriye ait ürünler indirilir.</small>
+    </div>
+    <div class="card-body">
+
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            Her kategorinin "Veri Çekme Linki" varsa <b>Bot Başlat</b> butonuna basın. Bot arka planda ürünleri, resimleri ve fiyatları otomatik olarak indirecektir.
+        </div>
+
+        <div class="row g-4">
+
+            @{
+                var ikonlar = new Dictionary<string, string>
+                {
+                    ["matbaa"]    = "fas fa-print",
+                    ["promosyon"] = "fas fa-gift",
+                    ["reklam"]    = "fas fa-bullhorn",
+                    ["ambalaj"]   = "fas fa-box-open"
+                };
+                var renkler = new Dictionary<string, string>
+                {
+                    ["matbaa"]    = "primary",
+                    ["promosyon"] = "danger",
+                    ["reklam"]    = "warning",
+                    ["ambalaj"]   = "success"
+                };
+            }
+
+            @if (Model != null && Model.Any())
+            {
+                foreach (var kat in Model)
+                {
+                    var slug  = kat.Slug ?? "";
+                    var ikon  = ikonlar.TryGetValue(slug, out var ic) ? ic : "fas fa-tags";
+                    var renk  = renkler.TryGetValue(slug, out var rk) ? rk : "secondary";
+
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-@renk text-white d-flex align-items-center gap-2">
+                                <i class="@ikon fa-lg"></i>
+                                <span class="fw-bold fs-5">@kat.CategoryName</span>
+                                @if (kat.IsActive == true)
+                                {
+                                    <span class="badge bg-light text-dark ms-auto">Aktif</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary ms-auto">Pasif</span>
+                                }
+                            </div>
+                            <div class="card-body">
+                                @if (!string.IsNullOrEmpty(kat.ImportUrl))
+                                {
+                                    <div class="mb-3">
+                                        <small class="text-muted fw-bold d-block mb-1">Kaynak Link:</small>
+                                        <a href="@kat.ImportUrl" target="_blank" class="text-break small text-primary">
+                                            @kat.ImportUrl
+                                        </a>
+                                    </div>
+                                    <button onclick="botiBaslat(@kat.CategoryId, '@kat.CategoryName')"
+                                            class="btn btn-@renk w-100 fw-bold">
+                                        <i class="fas fa-play-circle me-2"></i>Bot Başlat — @kat.CategoryName Ürünlerini İndir
+                                    </button>
+                                }
+                                else
+                                {
+                                    <div class="text-muted mb-3">
+                                        <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                                        Bu kategoriye henüz bir veri çekme linki eklenmemiş.
+                                    </div>
+                                    <a href="/Admin/Dashboard/CategoryEdit?id=@kat.CategoryId"
+                                       class="btn btn-outline-@renk w-100">
+                                        <i class="fas fa-link me-2"></i>Link Ekle
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Matbaa, Promosyon, Reklam veya Ambalaj ana kategorisi bulunamadı.
+                        Önce bu kategorileri <a href="/Admin/Dashboard/CategoryList">Kategori Listesinde</a> oluşturun.
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- İşlem Sonucu Modalı -->
+<div class="modal fade" id="botModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="botModalTitle">
+                    <i class="fas fa-robot me-2"></i>Bot Çalışıyor...
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="botModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
+                    <h5 class="mt-3 text-muted">Lütfen bekleyiniz...</h5>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <a href="/Admin/Dashboard/Products" class="btn btn-success">
+                    <i class="fas fa-box-open me-1"></i>Ürünlere Git
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function botiBaslat(id, ad) {
+        document.getElementById('botModalTitle').innerHTML = '<i class="fas fa-robot me-2"></i>Bot Çalışıyor — ' + ad;
+        document.getElementById('botModalBody').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
+                <h5 class="mt-3">${ad} kategorisi taranıyor...</h5>
+                <p class="text-muted">Ürünler, resimler ve fiyatlar indiriliyor. Sayfayı kapatmayın.</p>
+            </div>`;
+
+        var modal = new bootstrap.Modal(document.getElementById('botModal'));
+        modal.show();
+
+        $.ajax({
+            url: '/DataImport/StartTreeImport?mainCategoryId=' + id,
+            type: 'GET',
+            success: function (response) {
+                document.getElementById('botModalBody').innerHTML = response;
+            },
+            error: function () {
+                document.getElementById('botModalBody').innerHTML =
+                    '<div class="alert alert-danger">Bir hata oluştu! Bot başlatılamadı.</div>';
+            }
+        });
+    }
+</script>

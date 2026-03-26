@@ -1,0 +1,238 @@
+@using Procopy.Models
+@model IEnumerable<Product>
+
+@{
+    ViewData["Title"] = "Ambalaj Ürünleri";
+    var altKategoriler = ViewBag.AltKategoriler as List<Category>;
+    string currentSlug = ViewBag.CurrentSlug as string;
+}
+
+<!-- SAYFA BAŞLIĞI -->
+<div class="page-banner" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border-bottom: 4px solid var(--pro-red);">
+    <div class="container py-5">
+        <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="banner-icon">
+                <i class="fas fa-box-open fa-2x text-white"></i>
+            </div>
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-1">
+                        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-white-50 text-decoration-none">Ana Sayfa</a></li>
+                        <li class="breadcrumb-item text-white-50 active">Ambalaj</li>
+                        @if (!string.IsNullOrEmpty(currentSlug))
+                        {
+                            <li class="breadcrumb-item text-danger active">@ViewBag.PageTitle</li>
+                        }
+                    </ol>
+                </nav>
+                <h1 class="fw-bold text-white mb-0">@ViewBag.PageTitle</h1>
+            </div>
+        </div>
+        <p class="text-white-50 mb-0 ms-5 ps-3">Ürünlerinizi değerli kılan profesyonel ambalaj çözümleri</p>
+    </div>
+</div>
+
+<!-- ALT KATEGORİ FİLTRE SEKMELERİ -->
+@if (altKategoriler != null && altKategoriler.Any())
+{
+    <div class="filter-bar bg-white border-bottom shadow-sm sticky-top" style="top:0; z-index:100;">
+        <div class="container">
+            <div class="d-flex gap-2 py-3 flex-wrap">
+                <a asp-controller="Ambalaj" asp-action="Index"
+                   class="filter-pill @(string.IsNullOrEmpty(currentSlug) ? "active" : "")">
+                    <i class="fas fa-th me-1"></i> Tümü
+                </a>
+                @foreach (var kat in altKategoriler)
+                {
+                    <a asp-controller="Ambalaj" asp-action="Index" asp-route-category="@kat.Slug"
+                       class="filter-pill @(currentSlug == kat.Slug ? "active" : "")">
+                        @kat.CategoryName
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ÜRÜN GRID -->
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <span class="text-muted small">
+            <strong class="text-dark">@ViewBag.TotalCount</strong> ürün bulundu
+            @if (ViewBag.TotalPages > 1)
+            {
+                <span>— Sayfa @ViewBag.CurrentPage / @ViewBag.TotalPages</span>
+            }
+        </span>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill">
+            <i class="fas fa-arrow-left me-1"></i> Ana Sayfa
+        </a>
+    </div>
+
+    <div class="row g-4">
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var item in Model)
+            {
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card product-card h-100 border-0 shadow-sm">
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductCode"
+                           class="d-block text-decoration-none position-relative overflow-hidden">
+                            @if (!string.IsNullOrEmpty(item.MainImageUrl))
+                            {
+                                <img src="@item.MainImageUrl"
+                                     class="card-img-top p-3 product-img"
+                                     alt="@item.ProductName"
+                                     style="height:220px; object-fit:contain;" />
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center justify-content-center product-img-placeholder"
+                                     style="height:220px; background:linear-gradient(135deg,#f8f9fa,#e9ecef);">
+                                    <i class="fas fa-box-open fa-3x text-danger opacity-50"></i>
+                                </div>
+                            }
+                            @if (item.OldPrice.HasValue && item.OldPrice.Value > item.Price.GetValueOrDefault())
+                            {
+                                <span class="badge bg-danger position-absolute top-0 start-0 m-2">İndirim</span>
+                            }
+                        </a>
+                        <div class="card-body d-flex flex-column text-center p-3">
+                            <small class="text-muted mb-1 text-uppercase" style="font-size:0.7rem;">@item.Category?.CategoryName</small>
+                            <h6 class="card-title fw-bold mb-3 flex-grow-1" style="font-size:0.85rem; line-height:1.4;">
+                                @item.ProductName
+                            </h6>
+                            <div class="mt-auto">
+                                @if (item.Price.HasValue && item.Price.Value > 0)
+                                {
+                                    @if (item.OldPrice.HasValue && item.OldPrice.Value > item.Price.Value)
+                                    {
+                                        <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                                            <span class="text-muted text-decoration-line-through small">@item.OldPrice.Value.ToString("C2")</span>
+                                            <span class="text-danger fw-bold">@item.Price.Value.ToString("C2")</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="fw-bold text-danger mb-2">@item.Price.Value.ToString("C2")</p>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="text-secondary small mb-2">Fiyat Sorunuz</p>
+                                }
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductCode"
+                                   class="btn btn-outline-dark btn-sm w-100">İncele</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">Bu kategoride henüz ürün bulunmuyor.</h4>
+                <a asp-controller="Ambalaj" asp-action="Index" class="btn btn-outline-danger mt-3">Tüm Ürünleri Gör</a>
+            </div>
+        }
+    </div>
+
+    @if (ViewBag.TotalPages > 1)
+    {
+        <nav class="mt-5 d-flex justify-content-center">
+            <ul class="pagination">
+                @if (ViewBag.CurrentPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-controller="Ambalaj" asp-action="Index"
+                           asp-route-category="@ViewBag.Category" asp-route-page="@(ViewBag.CurrentPage - 1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                }
+                @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                {
+                    <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                        <a class="page-link" asp-controller="Ambalaj" asp-action="Index"
+                           asp-route-category="@ViewBag.Category" asp-route-page="@i">@i</a>
+                    </li>
+                }
+                @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-controller="Ambalaj" asp-action="Index"
+                           asp-route-category="@ViewBag.Category" asp-route-page="@(ViewBag.CurrentPage + 1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+</div>
+
+<style>
+    .banner-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(214, 0, 28, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .filter-pill {
+        display: inline-block;
+        padding: 6px 18px;
+        border-radius: 50px;
+        border: 1.5px solid #dee2e6;
+        color: #555;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+        .filter-pill:hover {
+            border-color: var(--pro-red);
+            color: var(--pro-red);
+        }
+
+        .filter-pill.active {
+            background-color: var(--pro-red);
+            border-color: var(--pro-red);
+            color: #fff;
+        }
+
+    .product-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+        }
+
+    .product-img {
+        transition: transform 0.3s ease;
+    }
+
+    .product-card:hover .product-img {
+        transform: scale(1.05);
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--pro-red);
+        border-color: var(--pro-red);
+    }
+
+    .page-link {
+        color: var(--pro-red);
+    }
+</style>

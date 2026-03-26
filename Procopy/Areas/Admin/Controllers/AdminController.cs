@@ -27,9 +27,7 @@ namespace Procopy.Areas.Admin.Controllers
                 // Categories tablosundaki toplam sayı (Tablo adın Category ise Category.Count() yap)
                 KategoriSayisi = _context.Categories.Count(),
 
-                // Eğer mesaj tablon varsa burayı açabilirsin, yoksa şimdilik 0 kalsın
-                // GelenMesajSayisi = _context.Messages.Count(), 
-                GelenMesajSayisi = 0,
+                GelenMesajSayisi = _context.ContactMessages.Count(),
 
                 // Şimdilik 0 olsun, sonra ekleriz
                 WhatsappTiklanmaSayisi = 0
@@ -194,50 +192,13 @@ namespace Procopy.Areas.Admin.Controllers
         }
         public IActionResult Products()
         {
-            // INNER JOIN sorununu önlemek için kategorileri ayrı yükle
-            var kategoriler = _context.Categories.AsNoTracking()
-                                      .ToDictionary(c => c.CategoryId);
-
-            var urunler = _context.Products.AsNoTracking()
-                                  .OrderByDescending(p => p.ProductId)
+            // Ürünleri çekerken kategorilerini de (Include) yanına alıyoruz.
+            // Böylece tabloda Kategori ID'si yerine Kategori Adını gösterebiliriz.
+            var urunler = _context.Products
+                                  .Include(p => p.Category) // Kategoriyi dahil et
                                   .ToList();
 
-            // Navigation property'yi elle bağla (LEFT JOIN etkisi)
-            foreach (var u in urunler)
-            {
-                if (kategoriler.TryGetValue(u.CategoryId, out var cat))
-                    u.Category = cat;
-            }
-
             return View(urunler);
-        }
-
-        // Mevcut ürünleri ProductCategories tablosuyla senkronize eder
-        public IActionResult SyncProductCategories()
-        {
-            var urunler = _context.Products.AsNoTracking().ToList();
-            int eklenen = 0;
-
-            foreach (var urun in urunler)
-            {
-                bool mevcutMu = _context.ProductCategories
-                    .Any(pc => pc.ProductId == urun.ProductId && pc.CategoryId == urun.CategoryId);
-
-                if (!mevcutMu && urun.CategoryId > 0)
-                {
-                    _context.ProductCategories.Add(new ProductCategory
-                    {
-                        ProductId = urun.ProductId,
-                        CategoryId = urun.CategoryId,
-                        IsMainCategory = true
-                    });
-                    eklenen++;
-                }
-            }
-
-            _context.SaveChanges();
-            TempData["Bilgi"] = $"Senkronizasyon tamamlandı. {eklenen} ürün kategoriye bağlandı.";
-            return RedirectToAction("Products");
         }
  
         [HttpGet]
@@ -334,6 +295,60 @@ namespace Procopy.Areas.Admin.Controllers
                 _context.SaveChanges();
             }
             return RedirectToAction("Products");
+        }
+
+        // GELEN MESAJLAR
+        public IActionResult Messages(string? search, string? dateFilter, int page = 1)
+        {
+            int pageSize = 20;
+
+            var query = _context.ContactMessages.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(m => m.Name.Contains(search) || m.Email.Contains(search) || m.Message.Contains(search) || (m.Subject != null && m.Subject.Contains(search)));
+
+            if (!string.IsNullOrWhiteSpace(dateFilter))
+            {
+                var now = DateTime.Now;
+                query = dateFilter switch
+                {
+                    "today" => query.Where(m => m.CreatedAt.Date == now.Date),
+                    "week"  => query.Where(m => m.CreatedAt >= now.AddDays(-7)),
+                    "month" => query.Where(m => m.CreatedAt >= now.AddMonths(-1)),
+                    _       => query
+                };
+            }
+
+            int total = query.Count();
+            var messages = query.OrderByDescending(m => m.CreatedAt)
+                                .Skip((page - 1) * pageSize)
+                                .Take(pageSize)
+                                .ToList();
+
+            ViewBag.Search     = search;
+            ViewBag.DateFilter = dateFilter;
+            ViewBag.Page       = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
+            ViewBag.Total      = total;
+
+            // Raporlama istatistikleri
+            ViewBag.TodayCount   = _context.ContactMessages.Count(m => m.CreatedAt.Date == DateTime.Today);
+            ViewBag.WeekCount    = _context.ContactMessages.Count(m => m.CreatedAt >= DateTime.Now.AddDays(-7));
+            ViewBag.MonthCount   = _context.ContactMessages.Count(m => m.CreatedAt >= DateTime.Now.AddMonths(-1));
+            ViewBag.TotalCount   = _context.ContactMessages.Count();
+
+            return View(messages);
+        }
+
+        public IActionResult DeleteMessage(int id)
+        {
+            var msg = _context.ContactMessages.Find(id);
+            if (msg != null)
+            {
+                _context.ContactMessages.Remove(msg);
+                _context.SaveChanges();
+            }
+            return RedirectToAction("Messages");
         }
 
     }

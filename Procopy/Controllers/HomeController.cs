@@ -8,7 +8,7 @@ namespace Procopy.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly ProcopyContext _context; // Veritabanï¿½ baï¿½lantï¿½mï¿½z
+        private readonly ProcopyContext _context; // Veritabaný baðlantýmýz
 
         // Context'i buraya enjekte ediyoruz (Dependency Injection)
         public HomeController(ILogger<HomeController> logger, ProcopyContext context)
@@ -19,20 +19,14 @@ namespace Procopy.Controllers
 
         public async Task<IActionResult> Index()
         {
+            // Veritabanýndan 'IsFeatured' (Öne Çýkan) olan ve 'IsActive' (Aktif) olan ürünleri getir.
+            // Son eklenen 8 ürünü alalým.
             var vitrinUrunleri = await _context.Products
-                                        .Include(p => p.Category)
+                                        .Include(p => p.Category) // Kategori adýný da çekmek için
                                         .Where(p => p.IsFeatured == true && p.IsActive == true)
                                         .OrderByDescending(p => p.ProductId)
                                         .Take(8)
                                         .ToListAsync();
-
-            var anaKategoriler = await _context.Categories
-                                        .Where(c => c.IsActive == true && c.ParentId == null && c.Slug != "indirimli-firsatlar")
-                                        .OrderBy(c => c.DisplayOrder)
-                                        .AsNoTracking()
-                                        .ToListAsync();
-
-            ViewBag.TopCategories = anaKategoriler;
 
             return View(vitrinUrunleri);
         }
