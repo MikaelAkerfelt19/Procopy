@@ -5,105 +5,140 @@
 }
 
 <section class="hero-section text-white text-center d-flex align-items-center justify-content-center">
+    <video class="hero-video" id="heroVideo" autoplay muted playsinline disablepictureinpicture controlslist="nodownload nofullscreen noremoteplayback">
+        <source src="~/videos/paint-ink-bg.mp4" type="video/mp4">
+    </video>
+    <div class="overlay"></div>
     <div class="container position-relative z-2">
-        <h1 class="display-3 fw-bold mb-3">İşletmenizin <span style="color:var(--pro-red)">Kurumsal</span> Yüzü</h1>
-        <p class="lead mb-4 mx-auto" style="max-width: 700px; opacity:0.9;">
+        <h1 class="display-3 fw-bold mb-3">İşletmenizin <span class="text-hero-red">Kurumsal</span> Yüzü</h1>
+        <p class="lead mb-4 mx-auto" style="max-width:700px; opacity:0.9;">
             Tabela, promosyon, matbaa ve dijital baskı çözümleriyle markanıza değer katıyoruz.
             Profesyonel tasarım ve kusursuz uygulama.
         </p>
-        <div class="d-flex justify-content-center gap-3">
-            <a asp-controller="Products" asp-action="Index" class="btn btn-pro-red btn-lg px-5">
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a asp-controller="Products" asp-action="Index" class="btn btn-pro-red btn-lg px-5 hero-btn">
                 <i class="fa-solid fa-magnifying-glass me-2"></i>ÜRÜNLERİ İNCELE
             </a>
-            <a href="https://wa.me/905551234567?text=Merhaba,%20detaylı%20bilgi%20almak%20istiyorum."
-               target="_blank" class="btn btn-outline-light btn-lg px-5">
+            <a href="https://wa.me/@(Configuration.WhatsAppPhone())?text=Merhaba,%20detaylı%20bilgi%20almak%20istiyorum."
+               target="_blank" class="btn btn-outline-light btn-lg px-5 hero-btn">
                 <i class="fa-brands fa-whatsapp me-2"></i>BİZE ULAŞIN
             </a>
         </div>
     </div>
-    <div class="overlay"></div>
 </section>
 
 <section class="py-5 bg-light">
     <div class="container mt-n5">
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+        <div class="row row-cols-2 row-cols-md-4 g-4">
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-gift fa-3x text-dark"></i></div>
-                    <h3 class="fw-bold h6 mb-0 flex-grow-1">Promosyon Ürünler</h3>
-                    <div class="mt-3">
-                        <a href="/Products?category=promosyon-urunler" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/promosyon.png" alt="Promosyon Ürünler" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 mb-0 flex-grow-1">Promosyon Ürünler</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=promosyon-urunler" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-user-pen fa-3x text-dark"></i></div>
-                    <h3 class="fw-bold h6 mb-0 flex-grow-1">Kişiye Özel Ürünler</h3>
-                    <div class="mt-3">
-                        <a href="/Products?category=kisiye-ozel" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/kisiye-ozel.png" alt="Kişiye Özel Ürünler" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 mb-0 flex-grow-1">Kişiye Özel Ürünler</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=kisiye-ozel" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-utensils fa-3x text-dark"></i></div>
-                    <h3 class="fw-bold h6 mb-0 flex-grow-1">Restaurant ve Cafe Menüleri</h3>
-                    <div class="mt-3">
-                        <a href="/Products?category=restaurant-cafe" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/menü.png" alt="Restaurant ve Cafe Menüleri" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 mb-0 flex-grow-1">Restaurant ve Cafe Menüleri</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=restaurant-cafe" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-print fa-3x text-dark"></i></div>
-                    <h3 class="fw-bold h6 mb-0 flex-grow-1">Reklam ve Matbaa Ürünleri</h3>
-                    <div class="mt-3">
-                        <a href="/matbaa" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/matbaa.jpg" alt="Reklam ve Matbaa Ürünleri" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 mb-0 flex-grow-1">Reklam ve Matbaa Ürünleri</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=matbaa-urunleri" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-sign-hanging fa-3x text-dark"></i></div>
-                    <h3 class="fw-bold h6 mb-0 flex-grow-1">Display Ürünler</h3>
-                    <div class="mt-3">
-                        <a href="/Products?category=display-urunler" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/display.jpg" alt="Display Ürünler" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 mb-0 flex-grow-1">Display Ürünler</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=display-urunler" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-shirt fa-3x text-dark"></i></div>
-                    <h3 class="fw-bold h6 mb-0 flex-grow-1">Tekstil Ürünleri</h3>
-                    <div class="mt-3">
-                        <a href="/Products?category=tekstil-urunleri" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/tekstil.png" alt="Tekstil Ürünleri" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 mb-0 flex-grow-1">Tekstil Ürünleri</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=tekstil-urunleri" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-award fa-3x text-dark"></i></div>
-                    <h3 class="fw-bold h6 mb-0 flex-grow-1">Madalya ve Plaket</h3>
-                    <div class="mt-3">
-                        <a href="/Products?category=madalya-plaket" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/plaket.png" alt="Madalya ve Plaket" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 mb-0 flex-grow-1">Madalya ve Plaket</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=madalya-plaket" class="btn btn-sm btn-outline-danger px-3">İncele <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col">
-                <div class="category-card p-4 bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column">
-                    <div class="icon-box mb-3"><i class="fa-solid fa-percent fa-3x text-danger"></i></div>
-                    <h3 class="fw-bold h6 text-danger mb-0 flex-grow-1">İndirimli Fırsatlar</h3>
-                    <div class="mt-3">
-                        <a href="/Products?category=indirimli-firsatlar" class="btn btn-sm btn-outline-danger px-3">Fırsatları Gör <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <div class="category-card bg-white shadow-sm text-center h-100 border-bottom-red d-flex flex-column overflow-hidden">
+                    <div class="category-img-wrap">
+                        <img src="~/images/categories/indirimli.png" alt="İndirimli Fırsatlar" class="category-img">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h3 class="fw-bold h6 text-danger mb-0 flex-grow-1">İndirimli Fırsatlar</h3>
+                        <div class="mt-3">
+                            <a href="/Products?category=indirimli-firsatlar" class="btn btn-sm btn-outline-danger px-3">Fırsatları Gör <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -155,7 +190,7 @@
                                     }
                                     else
                                     {
-                                        <p class="text-secondary fw-bold mb-3 fs-6">Fiyat Sorunuz</p>
+                                        <p class="text-secondary fw-bold mb-3 fs-6">Bize Ulaşınız</p>
                                     }
 
                                     <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-light w-100 border stretched-link">İncele</a>
@@ -175,51 +210,62 @@
     </div>
 </section>
 
-@* Kampanya Modalı ve Scriptler değişmeden kalabilir *@
-
-<div class="modal fade" id="campaignModal" tabindex="-1" aria-labelledby="campaignModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg overflow-hidden">
-            <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-3 bg-white p-2 rounded-circle opacity-100" data-bs-dismiss="modal" aria-label="Kapat"></button>
-            <div class="modal-body p-0">
-                <div class="row g-0">
-                    <div class="col-md-6 d-none d-md-block">
-                        <img src="https://placehold.co/600x800/1a1a1a/FFF?text=Kampanya+Gorseli" class="img-fluid w-100 h-100 object-fit-cover" alt="Kampanya">
-                    </div>
-                    <div class="col-md-6 bg-danger text-white d-flex align-items-center">
-                        <div class="p-5 text-center text-md-start">
-                            <h5 class="text-uppercase ls-1 text-white-50 mb-2">Sınırlı Süre Fırsatı</h5>
-                            <h2 class="fw-bold display-5 mb-3">Büyük İndirim Günleri!</h2>
-                            <p class="lead mb-4" style="font-size: 1.1rem;">
-                                Seçili promosyon ürünlerinde ve matbaa hizmetlerinde <strong>%50'ye varan</strong> indirimleri kaçırmayın.
-                            </p>
-                            <a href="/Products?category=indirimli-firsatlar" class="btn btn-light text-danger fw-bold py-3 px-5 rounded-pill shadow-sm hover-scale">
-                                FIRSATLARI GÖR <i class="fa-solid fa-arrow-right ms-2"></i>
-                            </a>
-                            <div class="mt-4 text-white-50 small">*Stoklarla sınırlıdır.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        if (!sessionStorage.getItem('popupshown')) {
-            var myModal = new bootstrap.Modal(document.getElementById('campaignModal'));
-            setTimeout(function() { myModal.show(); }, 1000);
-            sessionStorage.setItem('popupshown', 'true');
+        // Ping-pong video efekti
+        var video = document.getElementById('heroVideo');
+        var forward = true;
+        var step = 0.033; // ~30fps
+
+        video.addEventListener('loadedmetadata', function() {
+            video.play();
+        });
+
+        video.addEventListener('timeupdate', function() {
+            if (forward) {
+                if (video.currentTime >= video.duration - 0.1) {
+                    forward = false;
+                }
+            }
+        });
+
+        video.addEventListener('ended', function() {
+            forward = false;
+            reversePingPong();
+        });
+
+        function reversePingPong() {
+            var interval = setInterval(function() {
+                if (video.currentTime <= 0.1) {
+                    clearInterval(interval);
+                    forward = true;
+                    video.play();
+                    return;
+                }
+                video.currentTime = Math.max(0, video.currentTime - step);
+            }, 33);
         }
     });
 </script>
 
 <style>
     .hero-section {
-        background: linear-gradient(45deg, #1a1a1a, #333);
         height: 500px;
         position: relative;
+        overflow: hidden;
+    }
+
+    .hero-video {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: cover;
+        z-index: 0;
     }
 
     .overlay {
@@ -228,8 +274,28 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.6);
         z-index: 1;
+    }
+
+    .text-hero-red {
+        color: var(--pro-red, #dc3545);
+    }
+
+    .category-img-wrap {
+        height: 160px;
+        overflow: hidden;
+    }
+
+    .category-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+
+    .category-card:hover .category-img {
+        transform: scale(1.07);
     }
 
     .border-bottom-red {
@@ -256,15 +322,4 @@
         z-index: 5;
     }
 
-    .hover-scale {
-        transition: transform 0.2s;
-    }
-
-        .hover-scale:hover {
-            transform: scale(1.05);
-        }
-
-    .z-3 {
-        z-index: 3;
-    }
 </style>

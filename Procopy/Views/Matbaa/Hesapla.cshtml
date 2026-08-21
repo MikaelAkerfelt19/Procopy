@@ -465,7 +465,7 @@
 
     const productTypeName = '@Html.Raw(Model.ProductType.Name)';
     const productTypeSlug = '@Model.ProductType.Slug';
-    const waPhone = '905321234567'; // TODO: config'den çek
+    const waPhone = '@Configuration.WhatsAppPhone()';
 
     // ===== Tüm seçim değerlerini tutan nesne =====
     const selections = {};

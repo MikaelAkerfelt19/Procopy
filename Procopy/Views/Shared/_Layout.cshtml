@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - ProCopy Baskı Merkezi</title>
 
+    @* Sekme ikonu — logodan üretilen kare varyantlar *@
+    <link rel="icon" href="~/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="~/images/favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="~/images/favicon-48.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="~/images/favicon-180.png">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Poppins:wght@500;700;800&display=swap" rel="stylesheet">
@@ -248,7 +255,7 @@
                         </li>
 
                         <li class="nav-item ms-lg-3">
-                            <a class="btn btn-pro-red" href="https://wa.me/905551234567?text=Merhaba,%20web%20sitenizden%20teklif%20almak%20istiyorum." target="_blank">
+                            <a class="btn btn-pro-red" href="https://wa.me/@(Configuration.WhatsAppPhone())?text=Merhaba,%20web%20sitenizden%20teklif%20almak%20istiyorum." target="_blank">
                                 <i class="fa-brands fa-whatsapp me-2"></i>TEKLİF AL
                             </a>
                         </li>
@@ -288,9 +295,9 @@
 
                 <div class="col-lg-4 col-md-12 mb-4">
                     <h5>Bize Ulaşın</h5>
-                    <p class="small mb-2"><i class="fa-solid fa-location-dot me-2" style="color:var(--pro-red)"></i> Organize Sanayi Bölgesi, İstanbul</p>
-                    <p class="small mb-2"><i class="fa-solid fa-phone me-2" style="color:var(--pro-red)"></i> +90 555 123 45 67</p>
-                    <p class="small"><i class="fa-solid fa-envelope me-2" style="color:var(--pro-red)"></i> info@procopy.com</p>
+                    <p class="small mb-2"><i class="fa-solid fa-location-dot me-2" style="color:var(--pro-red)"></i> Sahabiye Mahallesi, Otak Sokak No: 48/C, Melikgazi / KAYSERİ</p>
+                    <p class="small mb-2"><i class="fa-solid fa-phone me-2" style="color:var(--pro-red)"></i> @Configuration.PhoneDisplay()</p>
+                    <p class="small"><i class="fa-solid fa-envelope me-2" style="color:var(--pro-red)"></i> yilmazd38@gmail.com</p>
                 </div>
             </div>
 

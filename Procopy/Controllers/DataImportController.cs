@@ -1,4 +1,5 @@
-﻿using Hangfire;
+using Hangfire;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Procopy.Jobs;
@@ -8,19 +9,25 @@ using System.Text;
 
 namespace Procopy.Controllers
 {
+    // Bot/içe aktarma araçları yönetim işlemidir; dışarıya açık kalmamalı.
+    [Authorize]
     public class DataImportController : Controller
     {
         private readonly ProcopyContext _context;
-        private readonly IBackgroundJobClient _jobs;
+        private readonly IServiceProvider _serviceProvider;
 
-        public DataImportController(ProcopyContext context, IBackgroundJobClient jobs)
+        public DataImportController(ProcopyContext context, IServiceProvider serviceProvider)
         {
             _context = context;
-            _jobs = jobs;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<IActionResult> StartTreeImport(int mainCategoryId)
         {
+            var jobs = _serviceProvider.GetService<IBackgroundJobClient>();
+            if (jobs == null)
+                return Content("Bot işlemi bu ortamda desteklenmiyor (Hangfire devre dışı).", "text/html");
+
             var mainCategory = await _context.Categories.FindAsync(mainCategoryId);
             if (mainCategory == null || string.IsNullOrWhiteSpace(mainCategory.ImportUrl))
                 return Content("Ana kategori bulunamadı veya ImportUrl boş.");
@@ -40,7 +47,7 @@ namespace Procopy.Controllers
             _context.ImportRuns.Add(run);
             await _context.SaveChangesAsync();
 
-            _jobs.Enqueue<TreeImportJob>(j => j.Run(run.RunId));
+            jobs.Enqueue<TreeImportJob>(j => j.Run(run.RunId));
 
             var html = $@"
 <div style='font-family:Segoe UI, sans-serif; padding:20px; color:#333;'>

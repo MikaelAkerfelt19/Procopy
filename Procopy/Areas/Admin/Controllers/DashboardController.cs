@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Procopy.Models;
 
 namespace Procopy.Areas.Admin.Controllers
 {
-    [Area("Admin")] // Bu Controller'ın Admin bölgesinde olduğunu belirtir (Çok Önemli!)
+    [Area("Admin")]
+    [Authorize]
     public class DashboardController : Controller
     {
         private readonly ProcopyContext _context;

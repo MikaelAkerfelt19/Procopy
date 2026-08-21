@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Ortam bazli gizli ayarlar - gercek sifreler burada, git e girmez
+appsettings.Development.json
+appsettings.Production.json

@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Procopy.Models; 
+using Procopy.Models;
 using System.Linq;
 
 namespace Procopy.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize]
     public class AdminController : Controller
     {
         private readonly ProcopyContext _context;
@@ -59,6 +61,7 @@ namespace Procopy.Areas.Admin.Controllers
 
         // KAYDETME İŞLEMİ (POST) - BOT ENTEGRASYONLU
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult CategoryCreate(Category p)
         {
             // Slug ve diğer zorunlu alanlar boş gelirse hata vermemesi için
@@ -163,8 +166,7 @@ namespace Procopy.Areas.Admin.Controllers
         }
 
         [HttpPost]
-
-        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult CategoryEdit(Category p)
         {
             var existing = _context.Categories.Find(p.CategoryId);
@@ -212,6 +214,7 @@ namespace Procopy.Areas.Admin.Controllers
         // YENİ ÜRÜN KAYDETME (POST)
         // YENİ ÜRÜN KAYDET (POST) - GÜNCELLENMİŞ HALİ
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Create(Product p)
         {
 
@@ -349,6 +352,41 @@ namespace Procopy.Areas.Admin.Controllers
                 _context.SaveChanges();
             }
             return RedirectToAction("Messages");
+        }
+
+        // VİTRİN YÖNETİMİ
+        public IActionResult Vitrin(string? search, string? category)
+        {
+            var query = _context.Products
+                                .Include(p => p.Category)
+                                .Where(p => p.IsActive == true)
+                                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(p => p.ProductName.Contains(search));
+
+            if (!string.IsNullOrWhiteSpace(category))
+                query = query.Where(p => p.Category.CategoryName == category);
+
+            ViewBag.Search = search;
+            ViewBag.Category = category;
+            ViewBag.Categories = _context.Categories.OrderBy(c => c.CategoryName).ToList();
+            ViewBag.FeaturedCount = _context.Products.Count(p => p.IsFeatured == true && p.IsActive == true);
+
+            return View(query.OrderByDescending(p => p.IsFeatured).ThenBy(p => p.ProductName).ToList());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ToggleFeatured(int id)
+        {
+            var product = _context.Products.Find(id);
+            if (product == null) return NotFound();
+
+            product.IsFeatured = !(product.IsFeatured ?? false);
+            _context.SaveChanges();
+
+            return Json(new { success = true, isFeatured = product.IsFeatured });
         }
 
     }

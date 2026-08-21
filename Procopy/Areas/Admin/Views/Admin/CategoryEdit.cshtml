@@ -12,6 +12,7 @@
     </div>
     <div class="card-body">
         <form method="post" action="/Admin/Admin/CategoryEdit">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="CategoryId" value="@Model.CategoryId" />
 
             <div class="row">

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Procopy.Models; 
+using Procopy.Models;
 using System.Diagnostics;
 
 namespace Procopy.Controllers
@@ -8,7 +8,7 @@ namespace Procopy.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly ProcopyContext _context; // Veritabaný baðlantýmýz
+        private readonly ProcopyContext _context; // VeritabanÄ± baÄŸlantÄ±mÄ±z
 
         // Context'i buraya enjekte ediyoruz (Dependency Injection)
         public HomeController(ILogger<HomeController> logger, ProcopyContext context)
@@ -19,10 +19,10 @@ namespace Procopy.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Veritabanýndan 'IsFeatured' (Öne Çýkan) olan ve 'IsActive' (Aktif) olan ürünleri getir.
-            // Son eklenen 8 ürünü alalým.
+            // VeritabanÄ±ndan 'IsFeatured' (Ã¶ne Ã§Ä±kan) ve 'IsActive' (aktif) olan Ã¼rÃ¼nleri getir.
+            // Son eklenen 8 Ã¼rÃ¼nÃ¼ alalÄ±m.
             var vitrinUrunleri = await _context.Products
-                                        .Include(p => p.Category) // Kategori adýný da çekmek için
+                                        .Include(p => p.Category) // Kategori adÄ±nÄ± da Ã§ekmek iÃ§in
                                         .Where(p => p.IsFeatured == true && p.IsActive == true)
                                         .OrderByDescending(p => p.ProductId)
                                         .Take(8)
@@ -36,9 +36,29 @@ namespace Procopy.Controllers
             return View();
         }
 
+        [HttpGet]
         public IActionResult Contact()
         {
-            return View();
+            return View(new ContactMessage());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Contact(
+            [Bind("Name,Email,Phone,Subject,Message")] ContactMessage model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            // CreatedAt ve IpAddress formdan deÄŸil sunucudan doldurulur.
+            model.CreatedAt = DateTime.Now;
+            model.IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            _context.ContactMessages.Add(model);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "MesajÄ±nÄ±z bize ulaÅŸtÄ±. En kÄ±sa sÃ¼rede dÃ¶nÃ¼ÅŸ yapacaÄŸÄ±z.";
+            return RedirectToAction(nameof(Contact));
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

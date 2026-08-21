@@ -21,6 +21,7 @@
             <div class="card-body p-4">
 
                 <form method="post" action="/Admin/Admin/CategoryCreate">
+                    @Html.AntiForgeryToken()
 
                     @if (parentId.HasValue)
                     {

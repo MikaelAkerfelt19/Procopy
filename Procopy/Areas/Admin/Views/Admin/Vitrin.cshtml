@@ -1,0 +1,143 @@
+@using Procopy.Models
+@model List<Product>
+
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Vitrin Yönetimi";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="text-muted mb-0">Ana sayfada "Vitrin Ürünleri" bölümünde gösterilecek ürünleri seçin.</p>
+    </div>
+    <span class="badge bg-danger fs-6 px-3 py-2">
+        <i class="fa-solid fa-star me-1"></i> <span id="featuredCount">@ViewBag.FeaturedCount</span> ürün vitrinde
+    </span>
+</div>
+
+@* Filtre Formu *@
+<div class="card shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Ürün adında ara...">
+            </div>
+            <div class="col-md-4">
+                <select name="category" class="form-select">
+                    <option value="">-- Tüm Kategoriler --</option>
+                    @foreach (var cat in ViewBag.Categories as List<Category>)
+                    {
+                        <option value="@cat.CategoryName" selected="@(ViewBag.Category == cat.CategoryName ? "selected" : null)">
+                            @cat.CategoryName
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-filter me-1"></i> Filtrele</button>
+            </div>
+            <div class="col-md-1">
+                <a href="/Admin/Admin/Vitrin" class="btn btn-outline-secondary w-100" title="Temizle"><i class="fa-solid fa-xmark"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Ürün Kartları *@
+@if (Model != null && Model.Any())
+{
+    <div class="row g-3" id="productGrid">
+        @foreach (var item in Model)
+        {
+            var isFeatured = item.IsFeatured == true;
+            <div class="col-6 col-md-3" id="card-@item.ProductId">
+                <div class="card h-100 border-2 @(isFeatured ? "border-danger shadow" : "border-light shadow-sm") position-relative" style="transition: all 0.2s;">
+                    @if (isFeatured)
+                    {
+                        <div class="position-absolute top-0 start-0 m-2 z-1">
+                            <span class="badge bg-danger"><i class="fa-solid fa-star me-1"></i>Vitrinde</span>
+                        </div>
+                    }
+                    <img src="@(string.IsNullOrEmpty(item.MainImageUrl) ? "https://placehold.co/300x200?text=Resim+Yok" : item.MainImageUrl)"
+                         class="card-img-top p-2" alt="@item.ProductName"
+                         style="height: 160px; object-fit: contain; background:#f8f9fa;">
+                    <div class="card-body p-2 text-center">
+                        <small class="text-muted d-block" style="font-size:0.7rem;">@item.Category?.CategoryName</small>
+                        <p class="fw-bold small mb-2 mt-1" style="line-height:1.3;">@item.ProductName</p>
+                        <button class="btn btn-sm w-100 toggle-btn @(isFeatured ? "btn-danger" : "btn-outline-secondary")"
+                                data-id="@item.ProductId"
+                                data-featured="@(isFeatured ? "true" : "false")">
+                            <i class="fa-solid @(isFeatured ? "fa-star" : "fa-star") me-1"></i>
+                            <span>@(isFeatured ? "Vitrine Eklendi" : "Vitrine Ekle")</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center">
+        <i class="fa-solid fa-circle-info me-2"></i> Kriterlere uyan ürün bulunamadı.
+    </div>
+}
+
+<script>
+    let featuredCount = @ViewBag.FeaturedCount;
+
+    document.querySelectorAll('.toggle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const id = this.dataset.id;
+            const card = document.getElementById('card-' + id);
+            const isFeatured = this.dataset.featured === 'true';
+
+            fetch('/Admin/Admin/ToggleFeatured', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: 'id=' + id
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const nowFeatured = data.isFeatured;
+                    this.dataset.featured = nowFeatured ? 'true' : 'false';
+
+                    // Butonu güncelle
+                    if (nowFeatured) {
+                        this.className = 'btn btn-sm w-100 toggle-btn btn-danger';
+                        this.querySelector('span').textContent = 'Vitrine Eklendi';
+                        card.querySelector('.card').classList.remove('border-light', 'shadow-sm');
+                        card.querySelector('.card').classList.add('border-danger', 'shadow');
+                        featuredCount++;
+                    } else {
+                        this.className = 'btn btn-sm w-100 toggle-btn btn-outline-secondary';
+                        this.querySelector('span').textContent = 'Vitrine Ekle';
+                        card.querySelector('.card').classList.remove('border-danger', 'shadow');
+                        card.querySelector('.card').classList.add('border-light', 'shadow-sm');
+                        featuredCount--;
+                    }
+
+                    // Badge'i güncelle
+                    document.getElementById('featuredCount').textContent = featuredCount;
+
+                    // Vitrin badge ekle/kaldır
+                    const existingBadge = card.querySelector('.badge.bg-danger');
+                    if (nowFeatured && !existingBadge) {
+                        const badge = document.createElement('div');
+                        badge.className = 'position-absolute top-0 start-0 m-2 z-1 vitrin-badge';
+                        badge.innerHTML = '<span class="badge bg-danger"><i class="fa-solid fa-star me-1"></i>Vitrinde</span>';
+                        card.querySelector('.card').appendChild(badge);
+                    } else if (!nowFeatured && existingBadge) {
+                        existingBadge.closest('.vitrin-badge, div')?.remove();
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+@Html.AntiForgeryToken()

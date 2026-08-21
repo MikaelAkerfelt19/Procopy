@@ -1,0 +1,93 @@
+@model Procopy.Models.Product
+
+@{
+    ViewData["Title"] = Model.ProductName;
+}
+
+<div class="container py-5">
+    <div class="row g-5">
+
+        @* Sol: Ürün Görseli *@
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+                <img src="@(string.IsNullOrEmpty(Model.MainImageUrl) ? "https://placehold.co/600x600?text=Resim+Yok" : Model.MainImageUrl)"
+                     alt="@Model.ProductName"
+                     class="img-fluid w-100"
+                     style="object-fit: contain; max-height: 480px; background:#f8f9fa; padding:2rem;">
+            </div>
+        </div>
+
+        @* Sağ: Ürün Bilgileri *@
+        <div class="col-lg-7 d-flex flex-column">
+
+            @if (Model.Category != null)
+            {
+                <a href="/Products?category=@Model.Category.Slug" class="text-danger text-uppercase fw-bold small text-decoration-none mb-2">
+                    <i class="fa-solid fa-tag me-1"></i>@Model.Category.CategoryName
+                </a>
+            }
+
+            <h1 class="fw-bold mb-3" style="font-size: 2rem;">@Model.ProductName</h1>
+
+            @* Fiyat *@
+            <div class="mb-4">
+                @if (Model.Price.HasValue && Model.Price.Value > 0)
+                {
+                    @if (Model.OldPrice.HasValue && Model.OldPrice.Value > Model.Price.Value)
+                    {
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-muted text-decoration-line-through fs-5">@Model.OldPrice.Value.ToString("C2")</span>
+                            <span class="text-danger fw-bold fs-2">@Model.Price.Value.ToString("C2")</span>
+                            <span class="badge bg-danger fs-6">
+                                -%@(Math.Round((1 - Model.Price.Value / Model.OldPrice.Value) * 100))
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-primary fw-bold fs-2">@Model.Price.Value.ToString("C2")</span>
+                    }
+                }
+                else
+                {
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-phone-volume text-danger fs-4"></i>
+                        <span class="fw-bold fs-3 text-danger">Bize Ulaşınız</span>
+                    </div>
+                    <small class="text-muted">Fiyat bilgisi için lütfen bizimle iletişime geçiniz.</small>
+                }
+            </div>
+
+            @* Açıklama *@
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="mb-4">
+                    <h5 class="fw-bold mb-2">Ürün Hakkında</h5>
+                    <p class="text-muted lh-lg">@Model.Description</p>
+                </div>
+            }
+
+            <hr class="my-3">
+
+            @* Butonlar *@
+            <div class="d-flex flex-column gap-3 mt-auto">
+                <a href="https://wa.me/@(Configuration.WhatsAppPhone())?text=Merhaba,%20@Uri.EscapeDataString(Model.ProductName)%20ürünü%20hakkında%20bilgi%20almak%20istiyorum."
+                   target="_blank"
+                   class="btn btn-success btn-lg rounded-pill px-5 shadow-sm"
+                   onclick="logClick(@Model.ProductId)">
+                    <i class="fa-brands fa-whatsapp me-2 fs-5"></i>WhatsApp ile Teklif Al
+                </a>
+                <a asp-controller="Products" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="fa-solid fa-arrow-left me-2"></i>Ürünlere Dön
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function logClick(id) {
+        fetch('/Products/LogWhatsappClick/' + id, { method: 'POST' });
+    }
+</script>
